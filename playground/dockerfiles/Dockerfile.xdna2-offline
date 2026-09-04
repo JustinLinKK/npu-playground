@@ -1,0 +1,121 @@
+# syntax=docker/dockerfile:1.7
+
+# Hardware-free AMD XDNA2 (AIE2P) operator-development environment.
+#
+# This image supports:
+#   * CPU/reference testing with NumPy + ml_dtypes (and optional CPU PyTorch)
+#   * IRON/MLIR-AIE generation for --dev npu2
+#   * Peano compilation of AIE2P C++ kernels
+#   * Offline creation of xclbin + instruction binaries
+#
+# It does NOT emulate XDNA2 execution or predict cycle-accurate performance.
+
+FROM ubuntu:24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG MLIR_AIE_REF=v1.4.2
+ARG IRON_REF=0d9ebcdd72f5eb85858ddfb0060cf463bedccf02
+ARG INSTALL_TORCH=0
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        clang \
+        clang-14 \
+        cmake \
+        curl \
+        g++-13 \
+        gcc-13 \
+        git \
+        lld \
+        lld-14 \
+        ninja-build \
+        python-is-python3 \
+        python3.12 \
+        python3.12-dev \
+        python3.12-venv \
+        uuid-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Keep the repository checkout and the mlir_aie wheel on the same release.
+RUN git clone --depth 1 --branch "${MLIR_AIE_REF}" \
+        https://github.com/Xilinx/mlir-aie.git /opt/mlir-aie \
+    && git -C /opt/mlir-aie submodule update --init --depth 1 \
+        third_party/hrx-xclbinutil
+
+# Build the repository's small XRT-free xclbin packager. The amdxdna kernel
+# driver and an actual NPU are therefore not required to create an xclbin.
+RUN cmake -G Ninja \
+        -S /opt/mlir-aie/third_party/hrx-xclbinutil \
+        -B /tmp/hrx-xclbinutil-build \
+        -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /tmp/hrx-xclbinutil-build --target hrx-xclbinutil \
+    && install -m 0755 \
+        /tmp/hrx-xclbinutil-build/tools/hrx-xclbinutil \
+        /usr/local/bin/xclbinutil \
+    && rm -rf /tmp/hrx-xclbinutil-build
+
+ENV VIRTUAL_ENV=/opt/ironenv
+
+RUN python3.12 -m venv "${VIRTUAL_ENV}" \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install --upgrade pip \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install \
+        -r /opt/mlir-aie/utils/peano-requirements.txt \
+    && MLIR_AIE_VERSION="${MLIR_AIE_REF#v}" \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install \
+        "mlir_aie==${MLIR_AIE_VERSION}" \
+        -f "https://github.com/Xilinx/mlir-aie/releases/expanded_assets/${MLIR_AIE_REF}" \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install pytest \
+    && if [ "${INSTALL_TORCH}" = "1" ]; then \
+         "${VIRTUAL_ENV}/bin/python" -m pip install torch \
+           --index-url https://download.pytorch.org/whl/cpu; \
+       fi
+
+# Pinned source examples from AMD's higher-level operator library. It is
+# installed without dependencies because the core image deliberately keeps
+# PyTorch optional; build with --build-arg INSTALL_TORCH=1 when needed.
+RUN mkdir -p /opt/IRON \
+    && git -C /opt/IRON init \
+    && git -C /opt/IRON remote add origin https://github.com/amd/IRON.git \
+    && git -C /opt/IRON fetch --depth 1 origin "${IRON_REF}" \
+    && git -C /opt/IRON checkout --detach FETCH_HEAD \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install --no-deps -e /opt/IRON
+
+ENV MLIR_AIE_INSTALL_DIR=/opt/ironenv/lib/python3.12/site-packages/mlir_aie
+ENV PEANO_INSTALL_DIR=/opt/ironenv/lib/python3.12/site-packages/llvm-aie
+ENV PATH=/opt/ironenv/bin:/opt/ironenv/lib/python3.12/site-packages/mlir_aie/bin:/usr/local/bin:${PATH}
+ENV PYTHONPATH=/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python:/opt/IRON
+ENV LD_LIBRARY_PATH=/opt/ironenv/lib/python3.12/site-packages/mlir_aie/lib
+ENV AIE_XCLBINUTIL=/usr/local/bin/xclbinutil
+ENV NPU2=1
+
+# The v1.4.2 Linux wheel can lose the executable bit on aiecc in some unpacking
+# environments, so normalize it explicitly.
+RUN chmod 0755 "${MLIR_AIE_INSTALL_DIR}/bin/aiecc"
+
+# Hardware-free build check: emit an XDNA2 design, compile its AIE2P C++ core,
+# and package the xclbin/instruction stream. Nothing is executed on an NPU.
+RUN mkdir -p /tmp/xdna2-smoke \
+    && python /opt/mlir-aie/programming_guide/section-4/section-4a/vector_scalar_mul.py \
+        --dev npu2 \
+        --emit-mlir > /tmp/xdna2-smoke/design.mlir \
+    && grep -q "aie.device(npu2_1col)" /tmp/xdna2-smoke/design.mlir \
+    && python /opt/mlir-aie/programming_guide/section-4/section-4a/vector_scalar_mul.py \
+        --dev npu2 \
+        --xclbin-path /tmp/xdna2-smoke/final.xclbin \
+        --insts-path /tmp/xdna2-smoke/insts.bin \
+    && test -s /tmp/xdna2-smoke/final.xclbin \
+    && test -s /tmp/xdna2-smoke/insts.bin \
+    && xclbinutil --info --input /tmp/xdna2-smoke/final.xclbin >/dev/null \
+    && rm -rf /tmp/xdna2-smoke
+
+WORKDIR /workspace
+
+CMD ["bash"]

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "name": "triton_layer_norm",
+  "source_file": "kernel.py",
+  "dialect": "triton",
+  "entrypoint": "layer_norm_kernel",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [16, 128]},
+    {"name": "weight", "direction": "input", "dtype": "float32", "shape": [128]},
+    {"name": "bias", "direction": "input", "dtype": "float32", "shape": [128]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [16, 128]}
+  ],
+  "constraints": ["normalize each row over its last axis", "apply output = normalized * weight + bias"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "layer_norm", "parameters": {"axis": -1, "epsilon": 1e-5}},
+  "provenance": {"repository": "https://github.com/triton-lang/triton", "commit": "64c974fda6bac26ec742e3e566e65848ba53b07f", "path": "python/tutorials/05-layer-norm.py", "license": "MIT"}
+}
+

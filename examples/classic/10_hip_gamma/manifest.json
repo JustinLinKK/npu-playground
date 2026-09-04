@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "name": "hip_gamma_correction",
+  "source_file": "kernel.hip",
+  "dialect": "hip",
+  "entrypoint": "gamma_correction",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [3, 32, 32]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [3, 32, 32]}
+  ],
+  "scalars": [
+    {"name": "n", "dtype": "int32", "value": 3072},
+    {"name": "gamma", "dtype": "float32", "value": 2.2}
+  ],
+  "constraints": ["clamp inputs to [0,1] then raise each element to gamma"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "gamma_correction", "parameters": {"gamma": 2.2}},
+  "provenance": {"repository": "https://github.com/ROCm/rocm-examples", "commit": "c3cae692de09d497d2bdb30a1bed41c1e9327312", "path": "Programming-Guide/Tutorials/Performance-Optimization/basic_image_gamma_correction/basic_image_gamma_correction.hip", "license": "MIT"}
+}
+

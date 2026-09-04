@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "name": "hip_moving_average",
+  "source_file": "kernel.hip",
+  "dialect": "hip",
+  "entrypoint": "moving_average",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [4096]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [4096]}
+  ],
+  "scalars": [
+    {"name": "n", "dtype": "int32", "value": 4096},
+    {"name": "window", "dtype": "int32", "value": 8}
+  ],
+  "constraints": ["each output is the mean of the trailing window including the current item", "the prefix uses the available items only"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "moving_average", "parameters": {"window": 8}},
+  "provenance": {"repository": "https://github.com/ROCm/rocm-examples", "commit": "c3cae692de09d497d2bdb30a1bed41c1e9327312", "path": "HIP-Basic/moving_average/main.hip", "license": "MIT"}
+}
+

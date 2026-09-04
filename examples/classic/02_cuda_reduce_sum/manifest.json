@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "name": "cuda_reduce_sum",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "reduce_sum",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [4096]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [1]}
+  ],
+  "scalars": [{"name": "n", "dtype": "int32", "value": 4096}],
+  "constraints": ["the launch recursively reduces block partials to one sum", "accumulation uses float32"],
+  "tolerance": {"rtol": 1e-4, "atol": 1e-3, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "reduce_sum", "parameters": {"axis": 0, "keepdims": true}},
+  "provenance": {"repository": "https://github.com/NVIDIA/cuda-samples", "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc", "path": "cpp/2_Concepts_and_Techniques/reduction/reduction_kernel.cu", "license": "BSD-3-Clause"}
+}
+

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "name": "triton_fused_attention",
+  "source_file": "kernel.py",
+  "dialect": "triton",
+  "entrypoint": "attention_kernel",
+  "tensors": [
+    {"name": "query", "direction": "input", "dtype": "float16", "shape": [1, 2, 32, 16]},
+    {"name": "key", "direction": "input", "dtype": "float16", "shape": [1, 2, 32, 16]},
+    {"name": "value", "direction": "input", "dtype": "float16", "shape": [1, 2, 32, 16]},
+    {"name": "output", "direction": "output", "dtype": "float16", "shape": [1, 2, 32, 16]}
+  ],
+  "constraints": ["non-causal scaled dot-product attention", "scale is inverse square root of head dimension"],
+  "tolerance": {"rtol": 0.02, "atol": 0.02, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "attention", "parameters": {"scale": 0.25}},
+  "provenance": {"repository": "https://github.com/triton-lang/triton", "commit": "64c974fda6bac26ec742e3e566e65848ba53b07f", "path": "python/tutorials/06-fused-attention.py", "license": "MIT"}
+}
+

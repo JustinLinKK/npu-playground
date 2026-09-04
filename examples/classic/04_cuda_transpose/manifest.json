@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "name": "cuda_tiled_transpose",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "matrix_transpose",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [64, 96]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [96, 64]}
+  ],
+  "constraints": ["output[j,i] = input[i,j]"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "transpose", "parameters": {"axes": [1, 0]}},
+  "provenance": {"repository": "https://github.com/NVIDIA/cuda-samples", "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc", "path": "cpp/6_Performance/transpose/transpose.cu", "license": "BSD-3-Clause"}
+}
+

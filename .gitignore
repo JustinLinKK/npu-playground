@@ -150,6 +150,9 @@ activemq-data/
 # Environments
 .env
 .envrc
+.npu-agent/
+/runs/*
+!/runs/.gitkeep
 .venv
 env/
 venv/

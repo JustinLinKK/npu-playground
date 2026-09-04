@@ -1,0 +1,64 @@
+# Intel NPU operator research without Intel NPU hardware.
+#
+# This image supports:
+#   1. Exact/reference execution of OpenVINO graphs on the CPU.
+#   2. Offline compilation for a selected Intel NPU platform through the
+#      Compiler-in-Plugin shipped in the OpenVINO archive.
+#
+# It does NOT provide functional or cycle-accurate NPU emulation, and it does
+# not provide a public SDK for arbitrary SHAVE/ActShave software kernels.
+
+FROM ubuntu:24.04
+
+ARG OPENVINO_VERSION=2026.3.1
+ARG OPENVINO_BUILD=22476.56d9685302d
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:${PATH} \
+    OPENVINO_TELEMETRY_DISABLED=1
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN test "$(dpkg --print-architecture)" = "amd64" \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        git \
+        ninja-build \
+        python3 \
+        python3-pip \
+        python3-venv \
+    && python3 -m venv "${VIRTUAL_ENV}" \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/intel
+
+RUN archive="openvino_toolkit_ubuntu24_${OPENVINO_VERSION}.${OPENVINO_BUILD}_x86_64.tgz" \
+    && archive_url="https://storage.openvinotoolkit.org/repositories/openvino/packages/${OPENVINO_VERSION}/linux/${archive}" \
+    && curl --fail --location --retry 5 --output "/tmp/${archive}" "${archive_url}" \
+    && tar -xzf "/tmp/${archive}" -C /opt/intel \
+    && mv "/opt/intel/openvino_toolkit_ubuntu24_${OPENVINO_VERSION}.${OPENVINO_BUILD}_x86_64" \
+          "/opt/intel/openvino_${OPENVINO_VERSION}" \
+    && ln -s "/opt/intel/openvino_${OPENVINO_VERSION}" /opt/intel/openvino_2026 \
+    && rm "/tmp/${archive}"
+
+# Install the OS libraries selected by the matching OpenVINO distribution,
+# then install its Python requirements inside the isolated virtual environment.
+RUN /opt/intel/openvino_2026/install_dependencies/install_openvino_dependencies.sh -y \
+    && python -m pip install --no-cache-dir \
+        -r /opt/intel/openvino_2026/python/requirements.txt \
+        pytest
+
+WORKDIR /work
+
+# Source setupvars for every command so OpenVINO's Python modules, plugins, and
+# Compiler-in-Plugin library are discoverable. Examples:
+#   docker run --rm -it -v "$PWD:/work" intel-npu-offline python operator.py
+#   docker run --rm -it -v "$PWD:/work" intel-npu-offline bash
+ENTRYPOINT ["/bin/bash", "-lc", "command=(\"$@\"); source /opt/intel/openvino_2026/setupvars.sh >/dev/null && exec \"${command[@]}\"", "--"]
+CMD ["bash"]
