@@ -1,0 +1,40 @@
+{
+  "verified_at": "2026-09-17T05:29:32.232870+00:00",
+  "paid_model_calls": 0,
+  "full_suite": {
+    "passed": 213,
+    "skipped": 25
+  },
+  "real_v4_container_tests": {
+    "passed": 2,
+    "targets": [
+      "amd_xdna2_npu2",
+      "intel_npu_4000"
+    ]
+  },
+  "additional_checks": [
+    "direct launcher plan: 18 cases, at most 303 calls including preflight",
+    "Python compilation",
+    "bash syntax",
+    "git diff --check and new-file whitespace",
+    "six-case fake-provider report generation including PNG/SVG",
+    "historical input CSV hashes unchanged",
+    "historical and v4 report figures visually inspected"
+  ],
+  "limitations": [
+    "live OpenRouter structured-schema preflight not executed",
+    "no paid v4 pilot or confirmatory campaign",
+    "reviewed holdout and source-runtime evidence still required for confirmation"
+  ],
+  "file_hashes": {
+    "src/npu_agent/study_v4.py": "cd631ab0f5c0bb62ada67c8755ac2b670ef8510c8e2a15375dc265fff8f0f8cb",
+    "src/npu_agent/study_v4_provider.py": "4411f2c2b6d322e6734d759982b4dc6e6c4f302bc4057a7d4b9e648c328d1b7a",
+    "src/npu_agent/study_v4_reporting.py": "1b90c62afb17410c1aa399b52cd857371c84f06efa2995198b1946f3d046024b",
+    "tests/test_study_v4.py": "e5a3d74f23809e61ec6d71ac34d3559ca1f13e290d53f2fa0b735aca5c8adb00",
+    "tests/test_study_v4_provider.py": "7a0e92c37054024f6071590cd8f5f92f20a0626016a278e66f4323d3fe863ad4",
+    "scripts/case_study_v4.py": "87e99dbac159d4747daf89f12eb89d9ddf6a767fa9d4585653da2f87b759870a",
+    "scripts/run_case_study_v4.sh": "6fa7276f413e2513848ad7134c094681e023250120c03dfc2c0a954c89ef8700",
+    "configs/case-study-v4.json": "65967a59a2181669a3ad4e9aa6a44467fa671b0bb35aa0174a3739432a452973",
+    "docs/case-study-v4.md": "0eb21e89758e0d8eb816834f6552f305c7c3f1de89a4b96ddcdc0432cb878453"
+  }
+}

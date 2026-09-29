@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-09-17T10:45:46.899713+00:00",
+  "full_suite": {
+    "command": ".venv/bin/python -m pytest -q",
+    "exit_code": 0,
+    "collection_summary": "281 tests collected in 0.19s",
+    "passed": 256,
+    "skipped": 25
+  },
+  "diff_check": "passed",
+  "terminal_reviews": 18,
+  "unreviewed_failure_labels": 0,
+  "frozen_source_hashes": "all match",
+  "known_ledger_charges": "all 174 match saved provider records",
+  "pending_requests": 0,
+  "experiment_processes": "serial PID 58434 and parallel PID 3665 exited",
+  "accounting_limitation": "Four historical missing billing records across attempts, two in retry pilot; not reconstructed or assigned zero cost."
+}

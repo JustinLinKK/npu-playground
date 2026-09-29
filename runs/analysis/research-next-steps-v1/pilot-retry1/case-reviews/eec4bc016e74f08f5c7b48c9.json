@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T09:28:24.137558+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/eec4bc016e74f08f5c7b48c9/report.json",
+  "source_report_sha256": "3b0b235bc537e0738dc65f1507d7ac848e4cd58a1436b2eb105459694b80a86f",
+  "metrics": {
+    "id": "eec4bc016e74f08f5c7b48c9",
+    "kernel": "triton_layer_norm",
+    "family": "triton_layer_norm",
+    "target": "amd_xdna2_npu2",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 109716,
+    "input_tokens": 57788,
+    "output_tokens": 51928,
+    "reasoning_tokens": 22588,
+    "cached_input_tokens": 12672,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 953.5858759729963,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 9,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 941.4099832329957
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "c26455ee09144f8d6de782c3f9000de966e40b02074e5c451379438a7286fc55",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "arith.constant cannot infer the supplied IntegerAttr value.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "4a1c281c61bc2c06d7147a18cbf938ba3139c52517df5e64f9608aad7cf8a9ac",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "Generated code imports unavailable aie.extras.dialects.ext module.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "911019f188ccc20ed2d8ae40770fdd1bb200231d22136806256ba567b7b09f26",
+      "failure_category": "backend_api",
+      "subtype": "python_syntax",
+      "evidence": "Invalid Python assignment syntax in generated design.py.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "ca4769df67d739f300373853b94c18218d72745c36d4fed72addaf82f53a4a39",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "arith.constant received unsupported index_type keyword.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "b47476412d458b2804990abc99336bff75dac1c994a9952422e3ff0ecb93ebe3",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "arith.constant received unsupported type keyword.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "170f14a0f60f34c58f26230b868d29d6baeaa4318d5b701c8aaf4a0dc24e4bc2",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "arith.constant received unsupported index keyword.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "509140510aca7d9ca64a946bfa5871932d0c7113d0c5c7ccd285874c3fec4602",
+      "failure_category": "backend_api",
+      "subtype": "python_syntax",
+      "evidence": "Unclosed Python parenthesis in generated design.py.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "728791c74bf02d0367ef64807c86d1ef2a60bd5fe463290843d1f9782f062020",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "objectfifo call omitted required dimension layout arguments.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "12607b102dd36a6eb8f866487a74b44577a278b4918c3182bca729e3c4cb5e3a",
+      "failure_category": "backend_api",
+      "subtype": "api_signature",
+      "evidence": "Invalid BDDimLayoutArrayAttr representation supplied to objectfifo.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "92e98a5e1e2a7b76bd2a44a2d592ce3470b8e2047325b0aa495731768d2cac9f",
+      "failure_category": null,
+      "subtype": "budget_boundary",
+      "evidence": "Paid code response retained; token budget prevented backend execution.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "All nine backend attempts failed during Python generation or AMD API construction. Final response was saved but not compiled after exceeding the token budget. The source/oracle numerical discrepancy is not the observed cause of these pre-execution failures."
+}

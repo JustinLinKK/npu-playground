@@ -21,18 +21,23 @@ def normalize_error(value: str) -> str:
     return hashlib.sha256(normalized.encode()).hexdigest()
 
 
+# Keep the catalog implementation dormant while the experiment measures translation alone.
+_KNOWLEDGE_ENABLED = False
+
+
 class Database:
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
-        self.connection = sqlite3.connect(path, check_same_thread=False)
+        self.connection = sqlite3.connect(path, timeout=60, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
         self.lock = threading.RLock()
         with self.connection:
             self.connection.execute("PRAGMA journal_mode=WAL")
             self.connection.execute("PRAGMA foreign_keys=ON")
         self._create_schema()
-        self.seed_builtin_knowledge()
+        if _KNOWLEDGE_ENABLED:
+            self.seed_builtin_knowledge()
 
     def _create_schema(self) -> None:
         with self.lock, self.connection:
@@ -148,7 +153,7 @@ class Database:
                 CREATE VIRTUAL TABLE IF NOT EXISTS lessons_fts USING fts5(
                     lesson_id UNINDEXED, diagnosis, fix_summary, operation_tags
                 );
-                PRAGMA user_version=6;
+
                 """
             )
             migrations = {
@@ -188,6 +193,27 @@ class Database:
                 self.connection.execute(
                     "UPDATE lessons SET vendor=CASE WHEN backend='amd_xdna2' THEN 'amd' ELSE 'intel' END"
                 )
+
+            self._migrate_validation_payloads()
+
+    def _migrate_validation_payloads(self) -> None:
+        from .validation import legacy_validation
+
+        if self.connection.execute("PRAGMA user_version").fetchone()[0] >= 7:
+            return
+        for table, column, key in (("compile_attempts", "result_json", "id"),
+                                   ("evaluations", "evaluation_json", "candidate_id")):
+            rows = self.connection.execute(
+                f"SELECT r.{key} AS row_key, r.{column} AS payload, c.id, c.target_id "
+                f"FROM {table} r JOIN candidates c ON c.id=r.candidate_id"
+            ).fetchall()
+            for row in rows:
+                payload = json.loads(row["payload"])
+                if payload and not payload.get("validation"):
+                    payload["validation"] = legacy_validation(payload, row["id"], row["target_id"]).model_dump(mode="json")
+                    self.connection.execute(f"UPDATE {table} SET {column}=? WHERE {key}=?",
+                                            (json.dumps(payload), row["row_key"]))
+        self.connection.execute("PRAGMA user_version=7")
 
     def start_run(
         self,
@@ -365,6 +391,8 @@ class Database:
         compiler_fingerprint: str | None = None,
         limit: int = 8,
     ) -> list[dict[str, Any]]:
+        if not _KNOWLEDGE_ENABLED:
+            return []
         tokens = re.findall(r"[A-Za-z0-9_]+", query)[:12] or ["kernel"]
         terms = " OR ".join(f'"{token}"' for token in tokens)
         sql = """
@@ -434,6 +462,8 @@ class Database:
         fix_summary: str,
         verified: bool,
     ) -> int:
+        if not _KNOWLEDGE_ENABLED:
+            return 0
         tags = " ".join(operation_tags)
         with self.lock, self.connection:
             cursor = self.connection.execute(
@@ -459,7 +489,9 @@ class Database:
             )
         return lesson_id
 
-    def retrieve_lessons(self, target: TargetProfile, query: str, limit: int = 8) -> list[dict[str, Any]]:
+    def retrieve_lessons(self, target: TargetProfile, query: str, limit: int = 8, compiler_fingerprint: str | None = None) -> list[dict[str, Any]]:
+        if not _KNOWLEDGE_ENABLED:
+            return []
         tokens = re.findall(r"[A-Za-z0-9_]+", query)[:12] or ["compile"]
         terms = " OR ".join(f'"{token}"' for token in tokens)
         sql = """
@@ -469,7 +501,7 @@ class Database:
               AND l.compiler_fingerprint=?
             ORDER BY score LIMIT ?
         """
-        compiler_fingerprint = f"{target.id}:{target.compiler_version}"
+        compiler_fingerprint = compiler_fingerprint or f"{target.id}:{target.compiler_version}"
         with self.lock:
             rows = self.connection.execute(
                 sql,

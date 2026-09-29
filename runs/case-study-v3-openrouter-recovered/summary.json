@@ -1,0 +1,528 @@
+{
+  "config": {
+    "corpus": "/home/justin/npu-playground/examples/classic",
+    "development_campaign": null,
+    "execution": {
+      "case_workers": 20,
+      "compiler_cpus": 6,
+      "compiler_memory": "8g",
+      "max_compiler_jobs": 4
+    },
+    "kernels": [
+      "cuda_reduce_sum",
+      "cuda_tiled_matmul",
+      "cuda_tiled_transpose",
+      "cuda_vector_add",
+      "hip_gamma_correction",
+      "hip_image_convolution",
+      "hip_moving_average",
+      "triton_fused_attention",
+      "triton_fused_softmax",
+      "triton_layer_norm"
+    ],
+    "knowledge_enabled": false,
+    "max_cycles": 10,
+    "model": "qwen/qwen3-coder-30b-a3b-instruct",
+    "order_seed": 20260916,
+    "protocol_revision": "case-study-v3",
+    "provider": "openrouter",
+    "reasoning_effort": "none",
+    "repetitions": 3,
+    "scenarios": [
+      "baseline_minimal",
+      "baseline",
+      "structured_ir",
+      "hinted_ir"
+    ],
+    "stage": "controlled",
+    "targets": [
+      "amd_xdna2_npu2",
+      "intel_npu_4000"
+    ],
+    "validation_policy": "offline-validated"
+  },
+  "experiment_clocks": [
+    {
+      "elapsed_including_pauses_seconds": null,
+      "repetition": 1,
+      "status": "interrupted",
+      "summed_active_case_seconds": null
+    }
+  ],
+  "groups": [
+    {
+      "active_seconds": 5193.656691823995,
+      "blocked": 0,
+      "cycles_spent": 100,
+      "failure_categories": {
+        "malformed_report": 1,
+        "source_compile": 8,
+        "target_compile": 1
+      },
+      "first_cycle_solved": 0,
+      "known_tokens": 484302,
+      "llm_calls": 100,
+      "method": "baseline_minimal",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 0,
+      "success_rate": 0.0,
+      "success_within_token_budget": {
+        "10000": 0.0,
+        "100000": 0.0,
+        "200000": 0.0,
+        "25000": 0.0,
+        "400000": 0.0,
+        "50000": 0.0
+      },
+      "successes_by_repetition": [
+        0,
+        0,
+        0
+      ],
+      "target": "amd_xdna2_npu2",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 3842.804905877001,
+      "blocked": 0,
+      "cycles_spent": 91,
+      "failure_categories": {
+        "source_compile": 3,
+        "source_execution": 3,
+        "target_compile": 3
+      },
+      "first_cycle_solved": 1,
+      "known_tokens": 479738,
+      "llm_calls": 91,
+      "method": "baseline",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 1,
+      "success_rate": 0.03333333333333333,
+      "success_within_token_budget": {
+        "10000": 0.03333333333333333,
+        "100000": 0.03333333333333333,
+        "200000": 0.03333333333333333,
+        "25000": 0.03333333333333333,
+        "400000": 0.03333333333333333,
+        "50000": 0.03333333333333333
+      },
+      "successes_by_repetition": [
+        1,
+        0,
+        0
+      ],
+      "target": "amd_xdna2_npu2",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 5553.616087016002,
+      "blocked": 0,
+      "cycles_spent": 92,
+      "failure_categories": {
+        "source_compile": 3,
+        "source_execution": 3,
+        "target_compile": 2,
+        "translation": 1
+      },
+      "first_cycle_solved": 0,
+      "known_tokens": 684049,
+      "llm_calls": 102,
+      "method": "structured_ir",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 1,
+      "success_rate": 0.03333333333333333,
+      "success_within_token_budget": {
+        "10000": 0.0,
+        "100000": 0.03333333333333333,
+        "200000": 0.03333333333333333,
+        "25000": 0.03333333333333333,
+        "400000": 0.03333333333333333,
+        "50000": 0.03333333333333333
+      },
+      "successes_by_repetition": [
+        1,
+        0,
+        0
+      ],
+      "target": "amd_xdna2_npu2",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 5071.518257764001,
+      "blocked": 0,
+      "cycles_spent": 79,
+      "failure_categories": {
+        "source_compile": 2,
+        "source_execution": 1,
+        "target_compile": 3,
+        "translation": 3
+      },
+      "first_cycle_solved": 1,
+      "known_tokens": 693395,
+      "llm_calls": 157,
+      "method": "hinted_ir",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 1,
+      "success_rate": 0.03333333333333333,
+      "success_within_token_budget": {
+        "10000": 0.03333333333333333,
+        "100000": 0.03333333333333333,
+        "200000": 0.03333333333333333,
+        "25000": 0.03333333333333333,
+        "400000": 0.03333333333333333,
+        "50000": 0.03333333333333333
+      },
+      "successes_by_repetition": [
+        1,
+        0,
+        0
+      ],
+      "target": "amd_xdna2_npu2",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 961.8953775709997,
+      "blocked": 0,
+      "cycles_spent": 59,
+      "failure_categories": {
+        "numerical_mismatch": 1,
+        "source_compile": 3
+      },
+      "first_cycle_solved": 1,
+      "known_tokens": 142829,
+      "llm_calls": 59,
+      "method": "baseline_minimal",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 6,
+      "success_rate": 0.2,
+      "success_within_token_budget": {
+        "10000": 0.16666666666666666,
+        "100000": 0.2,
+        "200000": 0.2,
+        "25000": 0.2,
+        "400000": 0.2,
+        "50000": 0.2
+      },
+      "successes_by_repetition": [
+        6,
+        0,
+        0
+      ],
+      "target": "intel_npu_4000",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 656.1229212989965,
+      "blocked": 0,
+      "cycles_spent": 36,
+      "failure_categories": {
+        "numerical_mismatch": 1,
+        "source_compile": 1
+      },
+      "first_cycle_solved": 4,
+      "known_tokens": 88950,
+      "llm_calls": 36,
+      "method": "baseline",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 8,
+      "success_rate": 0.26666666666666666,
+      "success_within_token_budget": {
+        "10000": 0.23333333333333334,
+        "100000": 0.26666666666666666,
+        "200000": 0.26666666666666666,
+        "25000": 0.26666666666666666,
+        "400000": 0.26666666666666666,
+        "50000": 0.26666666666666666
+      },
+      "successes_by_repetition": [
+        8,
+        0,
+        0
+      ],
+      "target": "intel_npu_4000",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 1124.974186833002,
+      "blocked": 0,
+      "cycles_spent": 60,
+      "failure_categories": {
+        "numerical_mismatch": 1,
+        "source_compile": 2,
+        "translation": 1
+      },
+      "first_cycle_solved": 0,
+      "known_tokens": 231724,
+      "llm_calls": 69,
+      "method": "structured_ir",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 6,
+      "success_rate": 0.2,
+      "success_within_token_budget": {
+        "10000": 0.06666666666666667,
+        "100000": 0.2,
+        "200000": 0.2,
+        "25000": 0.2,
+        "400000": 0.2,
+        "50000": 0.2
+      },
+      "successes_by_repetition": [
+        6,
+        0,
+        0
+      ],
+      "target": "intel_npu_4000",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    },
+    {
+      "active_seconds": 3106.1229682409976,
+      "blocked": 0,
+      "cycles_spent": 44,
+      "failure_categories": {
+        "numerical_mismatch": 1,
+        "source_compile": 1,
+        "source_execution": 1,
+        "translation": 2
+      },
+      "first_cycle_solved": 1,
+      "known_tokens": 262335,
+      "llm_calls": 86,
+      "method": "hinted_ir",
+      "recorded": 10,
+      "requested": 30,
+      "solved": 5,
+      "success_rate": 0.16666666666666666,
+      "success_within_token_budget": {
+        "10000": 0.1,
+        "100000": 0.16666666666666666,
+        "200000": 0.16666666666666666,
+        "25000": 0.16666666666666666,
+        "400000": 0.16666666666666666,
+        "50000": 0.16666666666666666
+      },
+      "successes_by_repetition": [
+        5,
+        0,
+        0
+      ],
+      "target": "intel_npu_4000",
+      "total_tokens": null,
+      "usage_complete_cases": 10
+    }
+  ],
+  "paired": [
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "structured_ir",
+      "paired_active_seconds": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "paired_tokens": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "reference": "baseline_minimal",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "amd_xdna2_npu2",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "structured_ir",
+      "paired_active_seconds": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "paired_tokens": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "reference": "baseline",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "amd_xdna2_npu2",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "structured_ir",
+      "paired_active_seconds": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "paired_tokens": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "reference": "hinted_ir",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "amd_xdna2_npu2",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "baseline",
+      "paired_active_seconds": {
+        "baseline": 0,
+        "reference": 0
+      },
+      "paired_tokens": {
+        "baseline": 0,
+        "reference": 0
+      },
+      "reference": "baseline_minimal",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "amd_xdna2_npu2",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "hinted_ir",
+      "paired_active_seconds": {
+        "hinted_ir": 0,
+        "reference": 0
+      },
+      "paired_tokens": {
+        "hinted_ir": 0,
+        "reference": 0
+      },
+      "reference": "baseline",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "amd_xdna2_npu2",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "structured_ir",
+      "paired_active_seconds": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "paired_tokens": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "reference": "baseline_minimal",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "intel_npu_4000",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "structured_ir",
+      "paired_active_seconds": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "paired_tokens": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "reference": "baseline",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "intel_npu_4000",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "structured_ir",
+      "paired_active_seconds": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "paired_tokens": {
+        "reference": 0,
+        "structured_ir": 0
+      },
+      "reference": "hinted_ir",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "intel_npu_4000",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "baseline",
+      "paired_active_seconds": {
+        "baseline": 0,
+        "reference": 0
+      },
+      "paired_tokens": {
+        "baseline": 0,
+        "reference": 0
+      },
+      "reference": "baseline_minimal",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "intel_npu_4000",
+      "token_complete_pairs": 0
+    },
+    {
+      "complete_kernel_clusters": 0,
+      "jointly_solved": 0,
+      "kernel_bootstrap_95_interval": null,
+      "method": "hinted_ir",
+      "paired_active_seconds": {
+        "hinted_ir": 0,
+        "reference": 0
+      },
+      "paired_tokens": {
+        "hinted_ir": 0,
+        "reference": 0
+      },
+      "reference": "baseline",
+      "requested_kernel_clusters": 10,
+      "success_rate_difference": null,
+      "target": "intel_npu_4000",
+      "token_complete_pairs": 0
+    }
+  ],
+  "status": "interrupted",
+  "token_budgets": [
+    10000,
+    25000,
+    50000,
+    100000,
+    200000,
+    400000
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "runs/ir-evolution-20260911/comparison/cases.csv": "812b3ad0eca23fdddbc0cf2506f74beb43fe6ca2637ddc7fd1948402ec7a96c3",
+  "runs/case-study-v2/cases.csv": "79160436d079d077550fd8cdc107c3f6e49e8c472cdc5bf48bd359fc80ac826f",
+  "runs/case-study-v2-recovered/cases.csv": "b914509be19eab838cabb8ec65404ce330b9fd5af1be888ff36f91473f3943ea",
+  "runs/case-study-v3-openrouter/cases.csv": "b2f6a996fafd3603d2aefba7139ab42e8a31cf4d8fdbcf372ec1a87d59868fd5",
+  "runs/case-study-v3-openrouter-interrupted-backup-20260917T031835Z/cases.csv": "b2f6a996fafd3603d2aefba7139ab42e8a31cf4d8fdbcf372ec1a87d59868fd5",
+  "runs/case-study-v3-openrouter-recovered/cases.csv": "363ee9757019ed8984145e7669ac299789d7d0924609df2414440855bd5a06cd"
+}

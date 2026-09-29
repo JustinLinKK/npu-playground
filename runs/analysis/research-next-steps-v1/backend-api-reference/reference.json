@@ -1,0 +1,111 @@
+{
+  "protocol": "backend-api-reference-v1",
+  "preflight_sha256": "6b7c09632c0b6e476ddcaa55d2f5e06d16a1865491344725180bb7680b5871ba",
+  "capture_sha256": "6c7c9f7faf968e177af0dfefb00ed56a1dbc004103ecf3491bff0a1afd40b8a0",
+  "scope": "Task-independent API signatures only; no kernel implementations, test inputs, or oracle outputs.",
+  "status": "blocked",
+  "targets": {
+    "amd_xdna2_npu2": {
+      "image_id": "sha256:fd31211a92209c950c993f647351ae657eb3ab8be1158b92f5da849a1d41a026",
+      "duration_seconds": 1.2413724699945305,
+      "returncode": 0,
+      "stderr": "",
+      "modules": {
+        "aie.dialects.aie": {
+          "path": "/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python/aie/dialects/aie.py",
+          "module_sha256": "dbb6b9a219d756c1a35d49cb2a6d23af210a989debb69fc0461b5252051dbe5e",
+          "symbols": {
+            "device": {
+              "available": true,
+              "signature": "(*args, **kwargs)"
+            },
+            "tile": {
+              "available": true,
+              "signature": "(col, row, *, loc=None, ip=None, allocation_scheme=None)"
+            },
+            "core": {
+              "available": true,
+              "signature": "(*args, **kwargs)"
+            },
+            "buffer": {
+              "available": true,
+              "signature": "(tile, datatype: aie._mlir_libs._mlir.ir.MemRefType | type[numpy.ndarray], name: str | None = None, address=None, initial_value: numpy.ndarray | None = None, use_write_rtp: bool = False, loc=None, ip=None)"
+            },
+            "external_func": {
+              "available": true,
+              "signature": "(name: str, inputs, outputs=None, visibility='private', link_with=None, link_with_mode=None)"
+            },
+            "objectfifo": {
+              "available": true,
+              "signature": "(sym_name: Union[str, aie._mlir_libs._mlir.ir.StringAttr], producer_tile: aie._mlir_libs._mlir.ir.Value[aie._mlir_libs._mlir.ir.IndexType], consumer_tiles: Sequence[aie._mlir_libs._mlir.ir.Value[aie._mlir_libs._mlir.ir.IndexType]], elem_number: Union[Any, aie._mlir_libs._mlir.ir.Attribute], elem_type: Union[Any, aie._mlir_libs._mlir.ir.TypeAttr], dimensions_to_stream: Union[Any, aie._mlir_libs._mlir.ir.Attribute], dimensions_from_stream_per_consumer: Union[Any, aie._mlir_libs._mlir.ir.Attribute], *, consumer_elem_type: Union[Any, aie._mlir_libs._mlir.ir.TypeAttr, NoneType] = None, via_dma: Union[bool, aie._mlir_libs._mlir.ir.BoolAttr, NoneType] = None, plio: Union[bool, aie._mlir_libs._mlir.ir.BoolAttr, NoneType] = None, disable_synchronization: Union[bool, aie._mlir_libs._mlir.ir.BoolAttr, NoneType] = None, repeat_count: Union[Any, aie._mlir_libs._mlir.ir.IntegerAttr, NoneType] = None, aie_stream: Union[Any, aie._mlir_libs._mlir.ir.IntegerAttr, NoneType] = None, aie_stream_port: Union[Any, aie._mlir_libs._mlir.ir.IntegerAttr, NoneType] = None, prod_dma_channel: Union[Any, aie._mlir_libs._mlir.ir.IntegerAttr, NoneType] = None, cons_dma_channels: Union[Sequence[int], aie._mlir_libs._mlir.ir.DenseI32ArrayAttr, NoneType] = None, init_values: Union[Any, aie._mlir_libs._mlir.ir.ArrayAttr, NoneType] = None, pad_dimensions: Union[Any, aie._mlir_libs._mlir.ir.Attribute, NoneType] = None, pad_value: Union[Any, aie._mlir_libs._mlir.ir.IntegerAttr, NoneType] = None, iter_count: Union[Any, aie._mlir_libs._mlir.ir.IntegerAttr, NoneType] = None, loc: Optional[aie._mlir_libs._mlir.ir.Location] = None, ip: Optional[aie._mlir_libs._mlir.ir.InsertionPoint] = None) -> aie.dialects._aie_ops_gen.ObjectFifoCreateOp"
+            },
+            "object_fifo": {
+              "available": true,
+              "signature": "(name, producerTile, consumerTiles, depth, datatype: aie._mlir_libs._mlir.ir.MemRefType | type[numpy.ndarray], dimensionsToStream=None, dimensionsFromStreamPerConsumer=None, initValues=None, via_DMA=None, plio=None, padDimensions=None, padValue=None, disable_synchronization=None, iter_count=None, consumer_datatype=None)"
+            },
+            "object_fifo_link": {
+              "available": true,
+              "signature": "(fifoIns, fifoOuts, srcOffsets=[], dstOffsets=[])"
+            },
+            "runtime_sequence": {
+              "available": true,
+              "signature": "(*, sym_name: Union[str, aie._mlir_libs._mlir.ir.StringAttr, NoneType] = None, emit_parameter_sync_preamble: Union[bool, aie._mlir_libs._mlir.ir.BoolAttr, NoneType] = None, loc: Optional[aie._mlir_libs._mlir.ir.Location] = None, ip: Optional[aie._mlir_libs._mlir.ir.InsertionPoint] = None) -> aie.dialects._aie_ops_gen.RuntimeSequenceOp"
+            }
+          }
+        },
+        "aie.dialects.aiex": {
+          "path": "/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python/aie/dialects/aiex.py",
+          "module_sha256": "a58e228c879f44eb287a9709101d1464f6c54c6fba6c29f256f40680d592a0e6",
+          "symbols": {
+            "npu_dma_memcpy_nd": {
+              "available": true,
+              "signature": "(metadata: str | aie.dialects._aie_ops_gen.ObjectFifoCreateOp, bd_id, mem, tap: aie.helpers.taplib.tap.TensorAccessPattern | None = None, offsets: Union[Sequence[Union[int, aie._mlir_libs._mlir.ir.IntegerAttr, aie._mlir_libs._mlir.ir.Operation, aie._mlir_libs._mlir.ir.OpView, aie._mlir_libs._mlir.ir.Value]], aie._mlir_libs._mlir.ir.ArrayAttr, aie._mlir_libs._mlir.ir.Operation, aie._mlir_libs._mlir.ir.OpView, aie._mlir_libs._mlir.ir.Value, NoneType] = None, sizes: Union[Sequence[Union[int, aie._mlir_libs._mlir.ir.IntegerAttr, aie._mlir_libs._mlir.ir.Operation, aie._mlir_libs._mlir.ir.OpView, aie._mlir_libs._mlir.ir.Value]], aie._mlir_libs._mlir.ir.ArrayAttr, aie._mlir_libs._mlir.ir.Operation, aie._mlir_libs._mlir.ir.OpView, aie._mlir_libs._mlir.ir.Value, NoneType] = None, strides: Union[Sequence[Union[int, aie._mlir_libs._mlir.ir.IntegerAttr, aie._mlir_libs._mlir.ir.Operation, aie._mlir_libs._mlir.ir.OpView, aie._mlir_libs._mlir.ir.Value]], aie._mlir_libs._mlir.ir.ArrayAttr, aie._mlir_libs._mlir.ir.Operation, aie._mlir_libs._mlir.ir.OpView, aie._mlir_libs._mlir.ir.Value, NoneType] = None, issue_token: bool | None = None, burst_length: int = 0, packet: tuple[int] | None = None, offset_parameter: str | None = None)"
+            },
+            "dma_wait": {
+              "available": true,
+              "signature": "(*args: aie.dialects._aie_ops_gen.ObjectFifoCreateOp | str)"
+            }
+          }
+        },
+        "aie.extras.dialects.arith": {
+          "path": "/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python/aie/extras/dialects/arith.py",
+          "module_sha256": "9337ac63fc3b273fcb57cb56b0f4766e4b94ed2274de42bdd2e760f5222b25af",
+          "symbols": {
+            "constant": {
+              "available": true,
+              "signature": "(value: Union[int, float, bool, numpy.ndarray], type: Optional[aie._mlir_libs._mlir.ir.Type] = None, index: Optional[bool] = None, *, result: Optional[aie._mlir_libs._mlir.ir.Type] = None, vector: Optional[bool] = False, loc: aie._mlir_libs._mlir.ir.Location = None, ip: aie._mlir_libs._mlir.ir.InsertionPoint = None) -> aie._mlir_libs._mlir.ir.Value"
+            }
+          }
+        },
+        "aie.extras.types": {
+          "path": "/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python/aie/extras/types.py",
+          "module_sha256": "4fde362638950567ce12709f9c63b92c2485b637ccd706a2e4bb0672fcd9c00f",
+          "symbols": {
+            "index": {
+              "available": true,
+              "signature": "()"
+            },
+            "i32": {
+              "available": true,
+              "signature": "()"
+            },
+            "f32": {
+              "available": true,
+              "signature": "()"
+            },
+            "memref": {
+              "available": true,
+              "signature": "(*shape, element_type: aie._mlir_libs._mlir.ir.Type = None, memory_space: Optional[int] = None, layout: Optional[aie._mlir_libs._mlir.ir.StridedLayoutAttr] = None)"
+            }
+          }
+        }
+      }
+    },
+    "intel_npu_4000": {
+      "image_id": "sha256:d1278b0741322f84979488ddee1c8524bbb7fec0cb446951a75df4a22f69a2cc",
+      "duration_seconds": 0.5725879560050089,
+      "returncode": 1,
+      "stderr": "Traceback (most recent call last):\n  File \"<stdin>\", line 5, in <module>\n  File \"/usr/lib/python3.12/importlib/__init__.py\", line 90, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1387, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1360, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1324, in _find_and_load_unlocked\nModuleNotFoundError: No module named 'openvino'\n"
+    }
+  }
+}

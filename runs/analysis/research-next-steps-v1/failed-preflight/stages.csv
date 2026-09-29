@@ -1,0 +1,82 @@
+scope,case_id,kernel,target,arm,cycle,stage,status,failure_category,message,known_tokens,usage_complete,seconds,generation_id,billed_cost
+preflight,,,,,0,model_CodeBundle,blocked,infrastructure,OpenRouter transport failed; response and exact usage unavailable,0,False,0.19384791899938136,,
+preflight,,,amd_xdna2_npu2,,0,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+preflight,,,amd_xdna2_npu2,,0,performance,not_requested,,,0,True,0.0,,
+preflight,,,amd_xdna2_npu2,,0,oracle_validation,passed,,,0,True,0.00026543800049694255,,
+preflight,,,amd_xdna2_npu2,,0,design_emission,passed,,,0,True,0.9161088760010898,,
+preflight,,,amd_xdna2_npu2,,0,target_compile,passed,,"aiecc: (1/37) input.mlir (0 inputs) took 0 ms
+aiecc: (2/37) placed.mlir (1 inputs) took 8 ms
+aiecc: (3/37) traced.mlir (1 inputs) took 0 ms
+aiecc: (4/37) input_with_addresses.mlir (1 inputs) took 22 ms
+aiecc: (5/37) input_physical.mlir (1 inputs) took 1 ms
+aiecc: (6/37) perCore_{0}.mlir (1 inputs) took 0 ms
+aiecc: (7/37) npu_materialized.mlir (1 inputs) took 0 ms
+aiecc: (8/37) perCoreInDevice (1 inputs) took 0 ms
+aiecc: (9/37) npu_dma_lowered.mlir (1 inputs) took 4 ms
+aiecc: (10/37) perCoreCompile (1 inputs) took 0 ms
+aiecc: (11/37) preBakedCores (1 inputs) took 0 ms
+aiecc: (13/37) npu_lowered.mlir (1 inputs) took 0 ms
+aiecc: (14/37) perCoreArches_{0}.txt (1 inputs) took 0 ms
+aiecc: (15/37) lowered_{0}.mlir (1 inputs) took 9 ms
+aiecc: (16/37) perCoreIRLinkFiles_{0}.txt (1 inputs) took 0 ms
+aiecc: (17/37) ldScripts_{0}.ld.script (1 inputs) took 0 ms
+aiecc: (18/37) npu_seq_{0}.mlir (1 inputs) took 0 ms
+aiecc: (19/37) llvmIR_{0}.ll (1 inputs) took 7 ms
+aiecc: (20/37) perSeqMatching (1 inputs) took 0 ms
+aiecc: (21/37) peano-compat_{0}.ll (1 inputs) took 0 ms
+aiecc: (22/37) peano-linked_{0}.ll (2 inputs) took 0 ms
+aiecc: (23/37) opted_{0}.ll (1 inputs) took 18 ms
+aiecc: (24/37) objects_{0}.o (2 inputs) took 15 ms
+aiecc: (25/37) npu_program_{0}.bin (1 inputs) took 62 ms
+aiecc: (26/37) insts.bin (1 inputs) took 0 ms
+aiecc: (27/37) elfs_{0}.elf (3 inputs) took 38 ms
+aiecc: (28/37) physical_with_elfs.mlir (2 inputs) took 0 ms
+aiecc: (29/37) perDevice_{0}.mlir (1 inputs) took 0 ms
+aiecc: (30/37) perDeviceMatching (1 inputs) took 0 ms
+aiecc: (31/37) cdo_{0} (1 inputs) took 0 ms
+aiecc: (32/37) memTopology_{0}.json (1 inputs) took 0 ms
+aiecc: (33/37) kernels_{0}.json (1 inputs) took 0 ms
+aiecc: (34/37) bif_{0}.bif (2 inputs) took 0 ms
+aiecc: (35/37) {0}.pdi (1 inputs) took 2 ms
+aiecc: (36/37) partition_{0}.json (2 inputs) took 0 ms
+aiecc: (37/37) final.xclbin (3 inputs) took 5 ms
+aiecc: wrote edge 'placed.mlir'
+aiecc: wrote edge 'traced.mlir'
+aiecc: wrote edge 'input_with_addresses.mlir'
+aiecc: wrote edge 'input_physical.mlir'
+aiecc: wrote edge 'perCore_{0}.mlir'
+aiecc: wrote edge 'perCoreArches_{0}.txt'
+aiecc: wrote edge 'lowered_{0}.mlir'
+aiecc: wrote edge 'perCoreIRLinkFiles_{0}.txt'
+aiecc: wrote edge 'llvmIR_{0}.ll'
+aiecc: wrote edge 'peano-compat_{0}.ll'
+aiecc: wrote edge 'peano-linked_{0}.ll'
+aiecc: wrote edge 'opted_{0}.ll'
+aiecc: wrote edge 'objects_{0}.o'
+aiecc: wrote edge 'ldScripts_{0}.ld.script'
+aiecc: wrote edge 'elfs_{0}.elf'
+aiecc: wrote edge 'physical_with_elfs.mlir'
+aiecc: wrote edge 'npu_materialized.mlir'
+aiecc: wrote edge 'npu_dma_lowered.mlir'
+aiecc: wrote edge 'npu_lowered.mlir'
+aiecc: wrote edge 'perDevice_{0}.mlir'
+aiecc: wrote edge 'cdo_{0}'
+aiecc: wrote edge 'bif_{0}.bif'
+aiecc: wrote edge '{0}.pdi'
+aiecc: wrote edge 'memTopology_{0}.json'
+aiecc: wrote edge 'kernels_{0}.json'
+aiecc: wrote edge 'partition_{0}.json'
+aiecc: wrote edge 'final.xclbin'
+aiecc: wrote edge 'npu_seq_{0}.mlir'
+aiecc: wrote edge 'insts.bin'
+",0,True,4.124583947999781,,
+preflight,,,amd_xdna2_npu2,,0,dataflow_frontend,passed,,,0,True,1.1337165200020536,,
+preflight,,,amd_xdna2_npu2,,0,host_execution,passed,,,0,True,1.5770616789995984,,
+preflight,,,amd_xdna2_npu2,,0,dataflow_simulation,passed,,,0,True,1.5826846060008393,,
+preflight,,,intel_npu_4000,,0,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+preflight,,,intel_npu_4000,,0,performance,not_requested,,,0,True,0.0,,
+preflight,,,intel_npu_4000,,0,oracle_validation,passed,,,0,True,0.0008899790009309072,,
+preflight,,,intel_npu_4000,,0,graph_construction,passed,,,0,True,1.3702730229997542,,
+preflight,,,intel_npu_4000,,0,host_execution,passed,,,0,True,2.584065703002125,,
+preflight,,,intel_npu_4000,,0,target_compile,passed,,,0,True,1.4675794139984646,,
+preflight,,,intel_npu_4000,,0,dataflow_simulation,not_requested,,,0,True,0.0,,

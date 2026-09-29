@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:41:08.206913+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/5c0221c34f9f6b5bca2e5333/report.json",
+  "source_report_sha256": "cfea1ed638ab7c75514c96c35d550c82b91052ca3d303d9baab33f21468ef347",
+  "metrics": {
+    "id": "5c0221c34f9f6b5bca2e5333",
+    "kernel": "triton_layer_norm",
+    "family": "triton_layer_norm",
+    "target": "intel_npu_4000",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 49951,
+    "input_tokens": 20409,
+    "output_tokens": 29542,
+    "reasoning_tokens": 20597,
+    "cached_input_tokens": 6912,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 573.416248608999,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 0,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 1,
+    "length_finishes": 0,
+    "model_seconds": 573.2019377600009
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "5ef1c0250938ed1a403c728363a75699044df1f79bc73562c349a101d9ac13b6",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "10cf620f65cec32fd14a5981321658ff17d438ce68eba6aed58ffe65dfc9ec9c",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "1218c215498847871bb5d9731cc65b97f4f1bc079c84d922e195488a02022cf2",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "a87ae8e851b77c4f19eddcf81625e2c1b66ed84c0c5f21d97fffb796e6d73d1e",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "712084903e8975c873717d538931e4f60a7995f211e5db9b1a0504b544de3c68",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "309b3407934224fe5acb45fbfed949c407eb13d5f22260ae51a231ad8ebb871c",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "11f160bba7a8e34ce3ba75fb88e6494259554bc67cf6fd496fbca55e8c6ce1fe",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "78b92b9fb67c0bddb979b67b1b847746d3106fab8ffeaa46c94153dd4fed6dbe",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "6019296a8e169db6a88dd040b693aeb61339703cf9b03c99005e0a7647eeb890",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "1f4cdc457c4ae11b0ec7077c0bb428c7fd7555f555b581c6027c23efcf55893e",
+      "failure_category": "model_output",
+      "subtype": "bundle_filename_contract",
+      "evidence": "unexpected generated files for intel_openvino: ['./model.py']",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "All ten cycles rejected the generated ./model.py filename under the frozen exact-path bundle contract, which requires model.py. No backend compilation or numerical execution occurred. Preserve this evaluator/model-output limitation rather than attributing the failure to numerical semantics or the NPU compiler."
+}

@@ -926,6 +926,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pydantic" },
+    { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
@@ -944,6 +945,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.10,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3,<9" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6,<8" },
+    { name = "pyyaml", specifier = ">=6,<7" },
 ]
 provides-extras = ["dev"]
 

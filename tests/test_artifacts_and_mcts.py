@@ -47,6 +47,42 @@ def test_materialize_bundle_restricts_backend_files(tmp_path: Path) -> None:
         materialize_bundle(invalid, tmp_path / "bad")
 
 
+def test_concurrent_artifact_publication_never_exposes_partial_copy(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, Lock
+    import npu_agent.artifacts as artifacts
+
+    source = tmp_path / "source.bin"
+    content = b"shared compiler artifact" * 100
+    source.write_bytes(content)
+    started, release, lock = Event(), Event(), Lock()
+    original_copy = artifacts.shutil.copyfile
+    calls = 0
+
+    def slow_first_copy(source_path, destination):
+        nonlocal calls
+        with lock:
+            calls += 1
+            first = calls == 1
+        if first:
+            Path(destination).write_bytes(content[:10])
+            started.set()
+            assert release.wait(10)
+        return original_copy(source_path, destination)
+
+    monkeypatch.setattr(artifacts.shutil, "copyfile", slow_first_copy)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(artifacts.store_artifact, source, tmp_path / "store")
+        try:
+            assert started.wait(10)
+            second = pool.submit(artifacts.store_artifact, source, tmp_path / "store")
+            stored, digest = second.result(timeout=10)
+            assert stored.read_bytes() == content
+        finally:
+            release.set()
+        assert first.result(timeout=10) == (stored, digest)
+
+
 def test_mcts_backpropagation_and_winner_tiers() -> None:
     root = candidate("root", 0.4)
     tree = MCTSTree(root, branching_factor=3)
@@ -101,3 +137,37 @@ def test_hardware_correctness_failure_cannot_win() -> None:
     )
     assert failed.evaluation.reward == 0
     assert select_winner([failed]) is None
+
+
+def test_host_failure_does_not_invent_target_execution() -> None:
+    result = CompileResult(success=True, exit_code=0, compiler_fingerprint="host", host_correct=False)
+    evaluation = evaluate_compile("host-mismatch", result)
+    assert evaluation.host_correctness is False
+    assert evaluation.target_correctness is None
+    assert evaluation.reward == 0
+    assert evaluation.validation.stages["target_execution"].status == "blocked"
+    assert "host output" in evaluation.notes[0]
+
+
+def test_requested_policy_excludes_compile_only_and_source_tokens_do_not_reward():
+    from npu_agent.models import StageResult, ValidationResult, ValidationPolicy
+    from npu_agent.mcts import static_score
+
+    plain = CompileResult(success=True, exit_code=0, compiler_fingerprint='test',
+                          static_metrics={'vectorization_signals': 0, 'artifact_bytes': 100})
+    noisy = plain.model_copy(deep=True)
+    noisy.static_metrics = {'vectorization_signals': 100000, 'artifact_bytes': 1}
+    assert static_score(plain) == static_score(noisy) == 0
+    candidate = Candidate(id='compile-only', run_id='run', target_id='amd_xdna2_npu2', label='compile', rationale='',
+                          bundle=CodeBundle(backend=Backend.AMD_XDNA2, files=[]))
+    candidate.evaluation = evaluate_compile(candidate.id, noisy)
+    assert select_winner([candidate], ValidationPolicy.OFFLINE_VALIDATED) is None
+    validated = candidate.model_copy(deep=True)
+    validated.id = 'validated'
+    plain.validation = ValidationResult(candidate_id=validated.id, target_id=validated.target_id, stages={
+        'target_compile': StageResult(status='passed'),
+        **{name: StageResult(status='passed', correct=True) for name in
+           ('oracle_validation', 'host_execution', 'dataflow_simulation')}})
+    plain.host_correct = True
+    validated.evaluation = evaluate_compile(validated.id, plain, ValidationPolicy.OFFLINE_VALIDATED)
+    assert select_winner([candidate, validated], ValidationPolicy.OFFLINE_VALIDATED).id == 'validated'

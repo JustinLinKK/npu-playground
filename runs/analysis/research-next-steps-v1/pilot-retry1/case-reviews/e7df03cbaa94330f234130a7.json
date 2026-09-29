@@ -1,0 +1,267 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:39:08.350874+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/e7df03cbaa94330f234130a7/report.json",
+  "source_report_sha256": "44b5f31cea884f88929a02fabf7fc4eef437273dcc4675d55feac3eda56564d1",
+  "metrics": {
+    "id": "e7df03cbaa94330f234130a7",
+    "kernel": "triton_layer_norm",
+    "family": "triton_layer_norm",
+    "target": "intel_npu_4000",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 47936,
+    "input_tokens": 27375,
+    "output_tokens": 20561,
+    "reasoning_tokens": 12564,
+    "cached_input_tokens": 6016,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 436.27529364899965,
+    "llm_calls": 10,
+    "cycles": 10,
+    "backend_attempts": 10,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 415.4606768870144
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "c7d41a312c23939c8d70f66560842c84dce09ab36f054243e58ce7bdce763d5d",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "ModuleNotFoundError: No module named 'openvino.runtime'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "2906d82606de89b05c31a645ff4aa5cba541908032a110dcb88e95f46afc5258",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "TypeError: reduce_mean() got an unexpected keyword argument 'keepdims'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "e82567fd58a12b8852d5a4c34d3075007bdddf1c3e7cf49d074702f1ff8067fb",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "ModuleNotFoundError: No module named 'openvino.runtime'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "6a1a25fc273e53cbdc10f75c0db48d7dfa88f20f20768712f93aa25bb9a186fc",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "cd1e459d97dfb25ed3e4e17a1e37e01f3c85760f73c10caa8f8c890636452012",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "AttributeError: module 'openvino.opset13' has no attribute 'rsqrt'. Did you mean: 'sqrt'?",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "b06fc79419e4be364fd3e0254730f00c14bcdda4d042d1afb64ab94eecd0b5c8",
+      "failure_category": "buffer_dataflow",
+      "subtype": "dynamic_interface_shape",
+      "evidence": "Port contract inspection cannot convert dynamic output shape to the required fixed shape.",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "22bb2eed138edf45450b21d6d0903e6265b9e2b4970e8c841f5ca0e11f36212d",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "7f21194719a13dca4b93d547761fd36262d74969805a3b40a6e853f524d365d8",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "AttributeError: module 'openvino' has no attribute 'Constant'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "8834babc119638516ce76f38d39e0e5cb371101df986226635b0e552f2bd3872",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "AttributeError: module 'openvino.opset13' has no attribute 'Constant'. Did you mean: 'constant'?",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "3a0704b448917e90535f8dfd6369359aa1c4e58755ecc89d3591a190942535c5",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "interpretation": "Parallel-run budget exhaustion. Three candidates execute and fail only the boundary tolerance; remaining attempts fail API or interface construction. Boundary metrics agree with the separately recorded original-source discrepancy; this does not prove whole-domain equivalence. Frozen acceptance remains failed."
+}

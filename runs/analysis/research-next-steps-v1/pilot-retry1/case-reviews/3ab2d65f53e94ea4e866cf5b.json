@@ -1,0 +1,106 @@
+{
+  "reviewer": "Codex agent inspection and offline replay of saved response content through frozen schema",
+  "reviewed_at": "2026-09-17T09:12:08.253972+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/3ab2d65f53e94ea4e866cf5b/report.json",
+  "source_report_sha256": "f1891d8fc7fd4e18597bf963a7460e2bc7acac42360eee237c3759d7782d4c80",
+  "metrics": {
+    "id": "3ab2d65f53e94ea4e866cf5b",
+    "kernel": "triton_layer_norm",
+    "family": "triton_layer_norm",
+    "target": "amd_xdna2_npu2",
+    "arm": "structured_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 57899,
+    "input_tokens": 15470,
+    "output_tokens": 42429,
+    "reasoning_tokens": 28418,
+    "cached_input_tokens": 3968,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 825.8133077420061,
+    "llm_calls": 10,
+    "cycles": 10,
+    "backend_attempts": 0,
+    "semantic_failures": 4,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 825.6996171499995
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "0b597252d28acce8b6d8082650a1cbb7a0903af3d3bb2cfae5083f2dc9cec3e0",
+      "failure_category": "model_output",
+      "backend_validation_reached": false,
+      "evidence": "Value error, IR does not produce outputs: ['output']"
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "1c9995ebca213d8bc885118e35b4904667f9f73b265d96459e2f4b70c700cba0",
+      "failure_category": "model_output",
+      "backend_validation_reached": false,
+      "evidence": "Value error, operation add_epsilon references unknown inputs: ['epsilon']"
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "9854409d15508395a12a8c0c33ba668cf03e5fac32e04a34bf3e1fade4cc5d41",
+      "failure_category": "semantic",
+      "backend_validation_reached": false,
+      "evidence": "not enough values to unpack (expected 3, got 1)"
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "0fc7500b84b0ad043d0436b0544357f719d3e929b20ab827bd40886a342987b4",
+      "failure_category": "model_output",
+      "backend_validation_reached": false,
+      "evidence": "Value error, operation operation_0 references unknown inputs: ['bias', 'input', 'weight']"
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "e215b3ad20a731d2e8c6a821e7a5f9c3a7422fbdd3fe1f6b5db4e6c733c0dc22",
+      "failure_category": "semantic",
+      "backend_validation_reached": false,
+      "evidence": "IR signature does not match the manifest"
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "49dcb84925c0317c9c5cf3561ad60c909e03593f93ecbd456e4e3a156368ab85",
+      "failure_category": "semantic",
+      "backend_validation_reached": false,
+      "evidence": "IR signature does not match the manifest"
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "fdde5237928bd2e8e8a7dc96b043e8305c41ab822424d3fdfe35ce163c1df6ce",
+      "failure_category": "semantic",
+      "backend_validation_reached": false,
+      "evidence": "IR signature does not match the manifest"
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "90a56be92585188942836e5f24a05a60f88da0a54990d2e77c32641574863296",
+      "failure_category": "model_output",
+      "backend_validation_reached": false,
+      "evidence": "Value error, operation 1 references unknown inputs: ['input']"
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "72f75ae029489ac16a396aa9300896424be5b6a43df77a88fc7757afc555813b",
+      "failure_category": "model_output",
+      "backend_validation_reached": false,
+      "evidence": "Value error, operation var_plus_epsilon references unknown inputs: ['epsilon']"
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "9ac51343cca0d3f824bf5e2bf61fb37108492ebcd31905b4138bbfa40507c1d3",
+      "failure_category": "model_output",
+      "backend_validation_reached": false,
+      "evidence": "Value error, operation 2 references unknown inputs: ['constant_128']"
+    }
+  ],
+  "interpretation": "Six schema/graph failures and four IR execution/signature failures prevented any backend generation. These are intermediate construction failures, distinct from numerical disagreements on an executable signature-valid IR and from backend failures. The original source/oracle counterexample does not explain these earlier failures."
+}

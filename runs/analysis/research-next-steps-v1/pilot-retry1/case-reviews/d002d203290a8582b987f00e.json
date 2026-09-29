@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:12:12.426164+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/d002d203290a8582b987f00e/report.json",
+  "source_report_sha256": "715addda40338ff8cee52ddca0540a22656dba6ad1b80c093ac7fd827819be4b",
+  "metrics": {
+    "id": "d002d203290a8582b987f00e",
+    "kernel": "cuda_vector_add",
+    "family": "cuda_vector_add",
+    "target": "amd_xdna2_npu2",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 93340,
+    "input_tokens": 39054,
+    "output_tokens": 54286,
+    "reasoning_tokens": 39250,
+    "cached_input_tokens": 7424,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 1030.097394851,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 8,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 1,
+    "length_finishes": 0,
+    "model_seconds": 1004.3457822490018
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "1f71bffe77c7f8cc630aa33d6b6ac632d2becb857d68dd32e3f5356af45e7d34",
+      "failure_category": "model_output",
+      "subtype": "bundle_contract",
+      "evidence": "generated bundle is missing required files: ['design.py', 'kernel.cc']",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "4035468986f283d4b1a470fe11c93a09bb800eb84e7a8a9dc2a6972eaba8424f",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":1:40: unknown attribute `device` in dialect `aie`",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "5b28e1cf10d729a3f4fbe870635256d2d4337ab048f4203b8d888b712f9d58e9",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":3:29: unknown attribute `target_profile` in dialect `aie`",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "b8090c7a479dfa97132a15fb194cf81fc08dee02997f0eafb415f5c706077230",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":3:29: unknown attribute `target_profile` in dialect `aie`",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "aa62e0f65f63b0d27597cf0af6290b4a160c504aadb1e6e128422dc928e69eac",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":29:14: expected ')'",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "fb2aa541f86200bf5bf4034a228e04ec1bf19594ea607829477ca44eac8b6a48",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":29:14: expected ')'",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "25a9282bb54a6daf2cc3df989ad38172b7e095011b42b5d1a606411ac2547ecc",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":12:14: custom op 'select' is unknown (tried 'func.select' as well)",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "9ff739c7c33784b308ca79b96a57f309e60bbeff15de798c345f04e609753c32",
+      "failure_category": "model_output",
+      "subtype": "bundle_contract",
+      "evidence": "unsupported bundle must not also claim an implementation",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "3f332917602d8cbc43690ef6ba6ab57426806dbe9aa90f84501ea4b93fa61057",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":26:10: custom op 'aie.external_buffer_load' is unknown",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "c17da4db34f1d3c363b3bfe42ff3543a0b9b15535fad6c781e22cbec2fc15355",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax_or_unknown_operation",
+      "evidence": "error: \"-\":38:33: expected operation name in quotes",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Ten cycles exhausted the case budget. Two bundle-contract rejections and eight MLIR parser failures prevented numerical execution. Repeated parser errors do not by themselves imply byte-identical candidates. This failed hinted case does not establish a cost benefit over a successful alternative."
+}

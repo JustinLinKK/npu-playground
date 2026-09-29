@@ -7,10 +7,11 @@ import sys
 from pathlib import Path
 
 from .baseline import translate_one_shot
-from .compilers import build_images, smoke_images
+from .compilers import DockerCompiler, build_images, smoke_images, capabilities
 from .config import TARGETS, Settings
 from .database import Database
-from .models import BaselineResult, KernelManifest, TranslationRequest, TranslationResult
+from .models import BaselineResult, KernelManifest, TranslationRequest, TranslationResult, ValidationPolicy
+from .validation import finalize_validation, policy_exit_code, write_json
 from .workflow import build_workflow, resume_run, translate
 
 
@@ -29,6 +30,9 @@ def _settings(args: argparse.Namespace) -> Settings:
         repository_path=Path(args.repository).resolve(),
         provider=getattr(args, "provider", "openai"),
         model=getattr(args, "model", None),
+        compiler_cpus=args.compiler_cpus, compiler_memory=args.compiler_memory,
+        compiler_timeout_seconds=args.compiler_timeout_seconds,
+        validation_policy=ValidationPolicy(getattr(args, "validation_policy", "compile-only")),
     )
 
 
@@ -42,10 +46,12 @@ def _request(args: argparse.Namespace, source: Path, manifest: Path) -> Translat
         search_rounds=getattr(args, "search_rounds", 3),
         branching_factor=getattr(args, "branching_factor", 3),
         debug_retries=getattr(args, "debug_retries", 2),
+        validation_policy=ValidationPolicy(args.validation_policy),
     )
 
 
 def _add_search_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--validation-policy", choices=[p.value for p in ValidationPolicy], default="offline-validated")
     parser.add_argument("--targets", type=_target_ids, default=list(TARGETS))
     parser.add_argument("--provider", choices=["openai", "codex-cli", "claude-cli"], default="openai")
     parser.add_argument("--model")
@@ -59,13 +65,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--database", default=".npu-agent/state.sqlite")
     parser.add_argument("--runs-path", default=".npu-agent/runs")
     parser.add_argument("--repository", default=".")
+    parser.add_argument("--compiler-cpus", type=int, default=4)
+    parser.add_argument("--compiler-memory", default="8g")
+    parser.add_argument("--compiler-timeout-seconds", type=int, default=1200)
     commands = parser.add_subparsers(dest="command", required=True)
 
     environment = commands.add_parser("env", help="build or smoke-test compiler environments")
     environment_commands = environment.add_subparsers(dest="env_command", required=True)
-    for name in ("build", "smoke"):
+    for name in ("build", "smoke", "capabilities"):
         command = environment_commands.add_parser(name)
         command.add_argument("--targets", type=_target_ids, default=list(TARGETS))
+        if name == "capabilities":
+            command.add_argument("--json", action="store_true")
 
     translate_command = commands.add_parser("translate", help="translate one kernel")
     translate_command.add_argument("source", type=Path)
@@ -78,10 +89,22 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("--targets", type=_target_ids, default=list(TARGETS))
     baseline.add_argument("--provider", choices=["openai", "codex-cli", "claude-cli"], default="openai")
     baseline.add_argument("--model")
+    baseline.add_argument("--validation-policy", choices=[p.value for p in ValidationPolicy], default="offline-validated")
 
     suite = commands.add_parser("suite", help="translate every manifest under a corpus")
     suite.add_argument("corpus", type=Path)
     _add_search_options(suite)
+
+    for name in ("validate-candidate", "validate-suite"):
+        command = commands.add_parser(name, help="validate deterministic backend code without a provider")
+        command.add_argument("path", type=Path)
+        command.add_argument("--validation-policy", choices=[p.value for p in ValidationPolicy], default="offline-validated")
+        command.add_argument("--report-dir", type=Path, default=Path("runs/container-validation"))
+        if name == "validate-candidate":
+            command.add_argument("--manifest", required=True, type=Path)
+            command.add_argument("--target", required=True, choices=list(TARGETS))
+        else:
+            command.add_argument("--targets", type=_target_ids, default=list(TARGETS))
 
     runs = commands.add_parser("runs", help="inspect or resume runs")
     runs_commands = runs.add_subparsers(dest="runs_command", required=True)
@@ -117,6 +140,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _print_result(result: TranslationResult | BaselineResult) -> None:
     print(result.model_dump_json(indent=2))
+    if result.status != "completed":
+        raise SystemExit(3 if result.status == "blocked" else 1)
 
 
 def _run_suite(args: argparse.Namespace, settings: Settings) -> int:
@@ -137,7 +162,7 @@ def _run_suite(args: argparse.Namespace, settings: Settings) -> int:
         "failed": [item.kernel for item in results if item.status != "completed"],
     }
     print(json.dumps(summary, indent=2))
-    return 0 if not summary["failed"] else 1
+    return 0 if not summary["failed"] else 3 if all(item.status == "blocked" for item in results) else 1
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -146,9 +171,39 @@ def main(argv: list[str] | None = None) -> None:
     settings = _settings(args)
     settings.ensure_directories()
     try:
+        if args.command in ("validate-candidate", "validate-suite"):
+            compiler = DockerCompiler(settings)
+            fixtures = [(args.path, args.manifest, args.target)] if args.command == "validate-candidate" else [
+                (p.parent, p, target) for target in args.targets for p in sorted((args.path / target).rglob("manifest.json"))]
+            if not fixtures:
+                raise ValueError("no backend fixtures found")
+            reports, codes = [], []
+            for candidate, manifest_path, target_id in fixtures:
+                manifest = KernelManifest.model_validate_json(manifest_path.read_text())
+                result = compiler.compile(candidate, args.report_dir / target_id / candidate.name, manifest, TARGETS[target_id])
+                report = finalize_validation(result.validation, args.validation_policy)
+                reports.append(report.model_dump(mode="json"))
+                codes.append(policy_exit_code(report))
+                print(report.model_dump_json(indent=2))
+            coverage = {}
+            for target_id in sorted({r["target_id"] for r in reports}):
+                coverage[target_id] = {}
+                for stage in ("oracle_validation", "host_execution", "dataflow_simulation", "target_compile", "target_execution"):
+                    values = [r["stages"].get(stage, {"status": "not_requested", "cases_run": 0}) for r in reports if r["target_id"] == target_id]
+                    coverage[target_id][stage] = {"requested_candidates": len(values),
+                        "supported_candidates": sum(s["status"] in ("passed", "failed") for s in values),
+                        "executed_input_cases": sum(s.get("cases_run", 0) for s in values),
+                        **{status: sum(s["status"] == status for s in values) for status in
+                           ("passed", "failed", "blocked", "unsupported", "not_requested")}}
+            summary = {"coverage": coverage, "total_requested": len(reports), "policy_passed": codes.count(0),
+                       "failed": codes.count(1), "blocked_or_unsupported": codes.count(3), "results": reports}
+            write_json(args.report_dir / "report.json", summary)
+            raise SystemExit(1 if 1 in codes else 3 if 3 in codes else 0)
         if args.command == "env":
             if args.env_command == "build":
                 build_images(settings, args.targets)
+            elif args.env_command == "capabilities":
+                print(json.dumps(capabilities(settings, args.targets), indent=2))
             else:
                 smoke_images(settings, args.targets)
             return
@@ -172,6 +227,7 @@ def main(argv: list[str] | None = None) -> None:
                 print(json.dumps(row, indent=2))
                 return
             request = TranslationRequest.model_validate_json(row["request_json"])
+            settings.validation_policy = request.validation_policy
             settings.provider = args.provider or request.provider
             settings.model = args.model or request.model
             graph = build_workflow(settings, database=database)
@@ -215,7 +271,7 @@ def main(argv: list[str] | None = None) -> None:
             print(json.dumps({"knowledge_id": item_id}))
     except (FileNotFoundError, KeyError, RuntimeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from exc
+        raise SystemExit(1 if isinstance(exc, RuntimeError) else 2) from exc
 
 
 if __name__ == "__main__":

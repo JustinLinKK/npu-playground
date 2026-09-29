@@ -1,0 +1,8 @@
+{
+  "comparison_matches_recorded_report": true,
+  "mismatch_count": 1280,
+  "max_scaled_error": 1.365878858816452,
+  "max_absolute_error": 1.5020370483398438e-05,
+  "source_output_sha256": "8f11c7d482ad82dd4869e0513ddfddd043d2a75b156ba0f0e8d9e09c158a4b1f",
+  "manifest_sha256": "6218dd06c0e5eda7cf55d8bfce41ec1e8fe9fec76ba81fd7d44d08497922e6ed"
+}

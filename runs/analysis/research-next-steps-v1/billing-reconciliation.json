@@ -1,0 +1,15 @@
+{
+  "status": "awaiting_per_request_evidence",
+  "failed_request_started_at": "2026-09-17T07:23:43.563658+00:00",
+  "campaign": "runs/case-study-v4-deepseek-pilot-config-key",
+  "case": "8ddb012acb4526407fe6f664",
+  "cycle": 3,
+  "stage": "code",
+  "recorded_call_cost_usd": "0.1870210641",
+  "configured_key_usage_before_experiment_usd": "0.54546296",
+  "configured_key_usage_after_stop_usd": "0.732484012",
+  "observed_delta_usd": "0.187021052",
+  "difference_vs_recorded_usd": "-0.0000000121",
+  "interpretation": "Aggregate usage agrees within rounding; no additional charge observed. Failed request generation ID, exact tokens and billed cost remain unavailable. This does not reconstruct per-request accounting.",
+  "action": "Preserve paused/blocked campaign and unknown-spending flag. No paid retry until billing reconciliation. Future campaign uses improved HTTP status telemetry and a new output directory."
+}

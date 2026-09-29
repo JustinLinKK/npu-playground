@@ -5,26 +5,27 @@ import time
 from dataclasses import dataclass, field
 
 from .artifacts import bundle_hash
-from .models import Candidate, CompileResult, Evaluation, EvidenceTier
+from .models import Candidate, CompileResult, Evaluation, EvidenceTier, ValidationPolicy
+from .validation import finalize_validation, legacy_validation, meets_policy
 
 
 def static_score(result: CompileResult) -> float:
-    if not result.success:
-        return 0.0
-    source_bytes = max(result.static_metrics.get("source_bytes", 1.0), 1.0)
-    artifact_bytes = max(result.static_metrics.get("artifact_bytes", 1.0), 1.0)
-    vector_signal = min(result.static_metrics.get("vectorization_signals", 0.0), 8.0) / 8.0
-    size_signal = 1.0 / (1.0 + math.log10(source_bytes + artifact_bytes))
-    return max(0.0, min(1.0, 0.7 * vector_signal + 0.3 * size_signal))
+    # No static source metric has been calibrated against target execution.
+    return 0.0
 
 
-def evaluate_compile(candidate_id: str, result: CompileResult) -> Evaluation:
+def evaluate_compile(candidate_id: str, result: CompileResult, policy: ValidationPolicy = ValidationPolicy.COMPILE_ONLY,
+                     target_id: str = "") -> Evaluation:
     started = time.perf_counter()
+    validation = result.validation or legacy_validation(result.model_dump(mode="json"), candidate_id, target_id)
+    validation.candidate_id = candidate_id
+    finalize_validation(validation, policy)
     score = static_score(result)
     artifact_bytes = int(result.static_metrics.get("artifact_bytes", 0.0))
     if not result.success:
         return Evaluation(
             candidate_id=candidate_id,
+            validation=validation,
             evidence_tier=EvidenceTier.INVALID,
             compile_success=False,
             correctness=result.hardware_correct if result.hardware_correct is not None else result.host_correct,
@@ -36,14 +37,15 @@ def evaluate_compile(candidate_id: str, result: CompileResult) -> Evaluation:
             duration_seconds=time.perf_counter() - started,
             notes=["candidate did not compile"],
         )
-    if result.hardware_correct is False:
+    if result.hardware_correct is False or result.host_correct is False:
         return Evaluation(
             candidate_id=candidate_id,
-            evidence_tier=EvidenceTier.HARDWARE_MEASURED,
+            validation=validation,
+            evidence_tier=EvidenceTier.HARDWARE_MEASURED if result.hardware_correct is not None else EvidenceTier.HOST_EQUIVALENCE,
             compile_success=True,
             correctness=False,
             host_correctness=result.host_correct,
-            target_correctness=False,
+            target_correctness=result.hardware_correct,
             reward=0.0,
             static_score=score,
             latency_p50_ms=result.latency_p50_ms,
@@ -52,7 +54,8 @@ def evaluate_compile(candidate_id: str, result: CompileResult) -> Evaluation:
             cpu_latency_p95_ms=result.cpu_latency_p95_ms,
             artifact_bytes=artifact_bytes,
             duration_seconds=time.perf_counter() - started,
-            notes=["target-NPU output did not match the oracle"],
+            notes=["target-NPU output did not match the oracle" if result.hardware_correct is False
+                   else "host output did not match the oracle"],
         )
     if result.latency_p50_ms is not None and result.hardware_correct is True:
         latency_component = 1.0 / (1.0 + result.latency_p50_ms)
@@ -66,12 +69,13 @@ def evaluate_compile(candidate_id: str, result: CompileResult) -> Evaluation:
         tier = EvidenceTier.OFFLINE_COMPILE
     return Evaluation(
         candidate_id=candidate_id,
+        validation=validation,
         evidence_tier=tier,
         compile_success=True,
         correctness=result.hardware_correct if result.hardware_correct is not None else result.host_correct,
         host_correctness=result.host_correct,
         target_correctness=result.hardware_correct,
-        reward=min(reward, 1.0),
+        reward=min(reward, 1.0) if validation.policy_met else 0.0,
         static_score=score,
         latency_p50_ms=result.latency_p50_ms,
         latency_p95_ms=result.latency_p95_ms,
@@ -151,18 +155,20 @@ def candidate_sort_key(candidate: Candidate) -> tuple[float, float, float, float
         correctness,
         latency,
         evaluation.static_score,
-        -evaluation.artifact_bytes,
+        0,
         bundle_hash(candidate.bundle),
         candidate.id,
     )
 
 
-def select_winner(candidates: list[Candidate]) -> Candidate | None:
+def select_winner(candidates: list[Candidate], policy: ValidationPolicy = ValidationPolicy.COMPILE_ONLY) -> Candidate | None:
     eligible = [
         candidate
         for candidate in candidates
         if candidate.evaluation
         and candidate.evaluation.compile_success
         and candidate.evaluation.correctness is not False
+        and (meets_policy(candidate.evaluation.validation, policy) if candidate.evaluation.validation
+             else policy == ValidationPolicy.COMPILE_ONLY)
     ]
     return max(eligible, key=candidate_sort_key) if eligible else None

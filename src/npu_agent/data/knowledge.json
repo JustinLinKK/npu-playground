@@ -10,8 +10,8 @@
       "hardware": "npu2",
       "compiler_fingerprint": "amd_xdna2_npu2:mlir-aie-v1.4.2",
       "tags": "iron program runtime worker objectfifo acquire release fill drain npu2 aie2p compile xclbin insts",
-      "body": "An IRON design binds a device, Runtime, and Worker list in Program(...).resolve_program(). Workers own compute-tile code and acquire/release producer or consumer ObjectFifo elements. The Runtime moves host tensors with fill and drain. For this repository, design.py must use add_compile_args(..., with_emit_mlir=True), device_from_args, and run_design_cli so --dev npu2, --emit-mlir, --xclbin-path, and --insts-path all work. Select npu2/AIE2P explicitly and keep kernel.cc relative to design.py. A compile is valid only when emitted MLIR contains an npu2 device and both xclbin and instruction artifacts are nonempty and inspectable.",
-      "content_sha256": "b5c4dc75de3b7826acd8872337cdba71daf309e65bfbdbe7f10f954d946757dd",
+      "body": "Emit design.py --dev npu2 --emit-mlir once, with kernel.cc as the only external source. The trusted repository driver parses the saved device, compiles the same source with Peano, and inspects linked core symbols and xclbin/instruction artifacts. Offline validation supports explicit tiles, finite workers, acquire/release windows and static DMA tasks. Host execution uses the exact C++ body with approved headers; unknown intrinsics and MLIR operations are unsupported. Compilation alone is not numerical validation or NPU binary execution.",
+      "content_sha256": "9a32384388eeb476c077d7e9298b12078d062f146aa8191abba0c8a7aabcc607",
       "source_url": "https://xilinx.github.io/mlir-aie/dev/api/iron/",
       "source_revision": "mlir-aie-v1.4.2; IRON-0d9ebcdd72f5eb85858ddfb0060cf463bedccf02"
     },
@@ -108,8 +108,8 @@
       "hardware": "4000",
       "compiler_fingerprint": "intel_npu_4000:openvino-2026.3.1",
       "tags": "openvino model opset13 parameter friendly name output static shape build_model",
-      "body": "model.py must import OpenVINO, define build_model(manifest=None), and return an ov.Model without compiling or running at import time. Create one opset13 Parameter per input tensor with the manifest's static shape and dtype. Each Parameter friendly name must exactly equal the manifest tensor name. Construct outputs from OpenVINO graph operations, give output tensors their manifest names, and pass the Parameters to ov.Model in deterministic manifest order. Scalars with fixed manifest values should be Constants. Never implement the result with NumPy or a constant precomputed output.",
-      "content_sha256": "30cd13f1c4da1c687ebd7ac29271aff663c784eba2c4386ff711fef3bd44be58",
+      "body": "model.py must import OpenVINO, define build_model(manifest=None), and return an ov.Model without compiling or running at import time. Create one opset13 Parameter per input tensor with the manifest's static shape and dtype. Explicitly set Parameter and output tensor names with output(0).get_tensor().set_names({manifest_name}); friendly names alone are insufficient. Construct outputs from OpenVINO graph operations, give output tensors their manifest names, and pass the Parameters to ov.Model in deterministic manifest order. Scalars with fixed manifest values should be Constants. Never implement the result with NumPy or a constant precomputed output.",
+      "content_sha256": "ae6d301a7ff47eef4fe1bde033c33d886edfdafc451b65e33c7d3e28cdc2d10f",
       "source_url": "https://github.com/openvinotoolkit/openvino/tree/2026.3.1/samples",
       "source_revision": "OpenVINO-2026.3.1"
     },

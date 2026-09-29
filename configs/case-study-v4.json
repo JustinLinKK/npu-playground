@@ -1,0 +1,26 @@
+{
+  "protocol": "case-study-v4",
+  "stage": "pilot",
+  "provider": {
+    "model": "deepseek/deepseek-v3.2",
+    "endpoint": "alibaba/fp8",
+    "upstream_provider": "Alibaba",
+    "reasoning": true,
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "max_tokens": 16384,
+    "timeout_seconds": 900
+  },
+  "corpus": "examples/classic",
+  "kernels": ["cuda_vector_add", "cuda_tiled_transpose", "triton_layer_norm"],
+  "targets": ["amd_xdna2_npu2", "intel_npu_4000"],
+  "arms": ["direct", "hinted_ir", "structured_ir"],
+  "repetitions": 1,
+  "seed": 20260917,
+  "max_cycles": 10,
+  "token_budget": 100000,
+  "active_seconds_budget": 1800,
+  "compiler_cpus": 6,
+  "compiler_memory": "8g",
+  "compiler_timeout_seconds": 600
+}

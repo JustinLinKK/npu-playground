@@ -332,7 +332,7 @@ def test_one_shot_does_not_retry_invalid_provider_output(tmp_path: Path) -> None
     assert json.loads(call["response_json"]) == {"invalid": True}
 
 
-def test_compile_failure_is_debugged_and_verified_lesson_is_retrievable(tmp_path: Path, monkeypatch) -> None:
+def test_compile_failure_is_debugged_without_storing_a_lesson(tmp_path: Path, monkeypatch) -> None:
     from npu_agent.database import Database
 
     queries: list[tuple[str, str]] = []
@@ -367,8 +367,8 @@ def test_compile_failure_is_debugged_and_verified_lesson_is_retrievable(tmp_path
     assert result.targets[0].winner.debug_attempt == 1
     database = Database(settings.database_path)
     lessons = database.retrieve_lessons(INTEL_NPU_4000, "add syntax")
-    assert len(lessons) == 1
-    assert lessons[0]["verified"] == 1
+    assert lessons == []
+    assert database.connection.execute("SELECT COUNT(*) FROM lessons").fetchone()[0] == 0
     assert any(role == "debug" and "syntax error" in query for role, query in queries)
 
 
@@ -454,3 +454,29 @@ def test_failed_node_resumes_from_sqlite_checkpoint(tmp_path: Path) -> None:
         raise AssertionError("the initial run should have been interrupted")
     result = resume_run(graph, run_id)
     assert result.status == "completed"
+
+
+def test_unavailable_target_executor_stops_search_without_repair_calls(tmp_path: Path) -> None:
+    from npu_agent.models import StageResult, ValidationResult
+
+    class BlockedCompiler(CountingCompiler):
+        def compile(self, candidate_dir, output_dir, manifest, target):
+            result = super().compile(candidate_dir, output_dir, manifest, target)
+            result.validation = ValidationResult(candidate_id='fixture', target_id=target.id, stages={
+                'target_compile': StageResult(status='passed'),
+                'oracle_validation': StageResult(status='passed', correct=True),
+                'host_execution': StageResult(status='passed', correct=True),
+                'target_execution': StageResult(status='blocked', reason_code='NO_VALIDATED_TARGET_EXECUTOR'),
+            })
+            return result
+
+    manifest_path = Path('examples/classic/01_cuda_vector_add/manifest.json')
+    manifest = KernelManifest.model_validate_json(manifest_path.read_text())
+    provider, compiler = FakeProvider(manifest), BlockedCompiler()
+    settings = Settings(repository_path=Path.cwd(), runs_path=tmp_path / 'runs', database_path=tmp_path / 'state.sqlite')
+    request = TranslationRequest(source_path=str(manifest_path.parent / manifest.source_file),
+        manifest_path=str(manifest_path), targets=[INTEL_NPU_4000], validation_policy='target-executed')
+    result = asyncio.run(translate(request, settings, provider=provider, compiler=compiler))
+    assert result.status == 'blocked'
+    assert compiler.calls == 1
+    assert provider.calls == ['KernelIR', 'CodeBundle']

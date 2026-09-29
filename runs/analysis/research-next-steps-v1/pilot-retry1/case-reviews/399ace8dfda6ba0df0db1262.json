@@ -1,0 +1,68 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:34:49.562093+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/399ace8dfda6ba0df0db1262/report.json",
+  "source_report_sha256": "f917c9936ae38f73a4099b5bf8b8e2c3e79b07d7bf24e3df2af087902c07a918",
+  "metrics": {
+    "id": "399ace8dfda6ba0df0db1262",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "intel_npu_4000",
+    "arm": "structured_ir",
+    "repetition": 1,
+    "status": "completed",
+    "offline_pass": true,
+    "success": true,
+    "known_tokens": 18716,
+    "input_tokens": 9953,
+    "output_tokens": 8763,
+    "reasoning_tokens": 7136,
+    "cached_input_tokens": 2816,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 195.5437132260049,
+    "llm_calls": 5,
+    "cycles": 4,
+    "backend_attempts": 3,
+    "semantic_failures": 1,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 189.34251517200028
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "5d88e702b02149061ad74404f8e9f01b8e28f407e856f960919a3749d4e09dd4",
+      "failure_category": "unsupported_ir",
+      "subtype": "unsupported_index_expression",
+      "evidence": "Executable index_expression rejected by semantic validation.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "2de2e5efa57eced933a50143fd25ab937cb1e5ab7397e76688f16d73420bd225",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "248964bc9880af0b189292f03e16b043952a6d61a1fac93e2f79394f5f087d3b",
+      "failure_category": "backend_api",
+      "subtype": "unsupported_keyword_argument",
+      "evidence": "transpose() rejects the generated axes keyword argument.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "a17268fca5327ad0851fbce46032683331708a881419278f69b7409a126edd44",
+      "failure_category": null,
+      "subtype": "offline_pass",
+      "evidence": "Target compilation and host correctness passed; physical NPU execution remains unvalidated.",
+      "numerical_validation_reached": true
+    }
+  ],
+  "interpretation": "Parallel-run offline success. IR passed in cycle 2 and was reused during backend repairs. One successful case does not establish an arm-level advantage. No physical NPU execution or performance evidence."
+}

@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T09:56:43.604251+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/1666138f0fe1e4b1c8cb130b/report.json",
+  "source_report_sha256": "119b431ec9c6bf4ed9e7c8a8e95f168d3d014245c7416c179731f744f5cd800f",
+  "metrics": {
+    "id": "1666138f0fe1e4b1c8cb130b",
+    "kernel": "cuda_vector_add",
+    "family": "cuda_vector_add",
+    "target": "amd_xdna2_npu2",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 87305,
+    "input_tokens": 47359,
+    "output_tokens": 39946,
+    "reasoning_tokens": 16704,
+    "cached_input_tokens": 6144,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 763.893014164998,
+    "llm_calls": 10,
+    "cycles": 10,
+    "backend_attempts": 10,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 731.9587524110029
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "772d16c08094286a9d71122424721993a21b87b412bbdd76892814f005a8ee52",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR region missing opening brace.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "0cb675cdb83ebc142e07153ee1b26833e0104e611348323748dadf080b30691c",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "func.func explicitly supplies inferred sym_visibility attribute.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "e50bb0fc4906f0ffbbbba20e27437eabd59cd8ad3eecdad7ebf4fb7dbf1ec2f1",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Uppercase AIE.tile dialect is not registered; lowercase aie is available.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "4e448c36228acfc80d732d85ba793b199422ec4cf064915cb6ec7b616824ea56",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Uppercase AIE.tile dialect remains unrecognized.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "2937367ccda5d97dc05c236a4269b199fc432624bfe8f94b671a37f62fe1078d",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Uppercase AIE.tile dialect remains unrecognized.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "1b52e2cb1bd4ff0949ab15e62ad930652a8b75e6e221e45eaa535c07c54af3bc",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Unknown aie.memory operation.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "55c25731972552b7b7d84dcfd0f58cf9c5db5c039c5a77873ec85009dc8a99d0",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Invalid Host2Mem DMA channel direction.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "81b073fd1d8712aba7c532d1ec44359fc777ca3c2dfe57e966fc8cfb2f87e859",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "DMA direction must be S2MM or MM2S.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "71bb77e00dee97cb3569f815a1acec5b40d3e065ae0a67adc3241fb5c3e51905",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Invalid DMA direction persists.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "fda68eb85502214600cd1f5b9daee3a1dc1f5bd427195b46416a50ca99b618be",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Invalid DMA direction persists.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "All ten backend attempts failed at MLIR parsing. Repeated error classes are not necessarily byte-identical candidates. Neither tensor-buffer interface execution nor numerical correctness was tested."
+}

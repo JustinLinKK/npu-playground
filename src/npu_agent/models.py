@@ -51,7 +51,7 @@ class EvidenceTier(IntEnum):
 
 
 class NumericTolerance(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     rtol: float = Field(default=1e-5, ge=0)
     atol: float = Field(default=1e-6, ge=0)
@@ -106,6 +106,9 @@ class OracleSpec(BaseModel):
         "moving_average",
         "conv2d",
         "gamma_correction",
+        "scalar_mul",
+        "sigmoid",
+        "silu",
     ]
     parameters: dict[str, Any] = Field(default_factory=dict)
 
@@ -125,6 +128,7 @@ class KernelManifest(BaseModel):
     seed: int = 0
     oracle: OracleSpec
     provenance: dict[str, str] = Field(default_factory=dict)
+    numerical_domain: Literal["finite"] = "finite"
 
     @model_validator(mode="after")
     def validate_arguments(self) -> KernelManifest:
@@ -172,6 +176,10 @@ class OperationAttributes(BaseModel):
     window: int | None = None
     padding: int | None = None
     gamma: float | None = None
+    value: int | float | bool | None = None
+    shape: list[int] | None = None
+    accumulation_dtype: Literal["float32", "float64", "int32", "int64"] | None = None
+    comparison: Literal["lt", "le", "eq", "ge", "gt", "ne"] | None = None
 
 
 class IROperation(BaseModel):
@@ -189,6 +197,22 @@ class IROperation(BaseModel):
         "moving_average",
         "conv2d",
         "gamma_correction",
+        "constant",
+        "subtract",
+        "multiply",
+        "divide",
+        "exp",
+        "sqrt",
+        "center",
+        "maximum",
+        "minimum",
+        "compare",
+        "select",
+        "reshape",
+        "cast",
+        "reduce_max",
+        "reduce_min",
+        "reduce_product",
     ]
     inputs: list[str]
     output: str
@@ -200,7 +224,7 @@ class IROperation(BaseModel):
 class KernelIR(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal["1.0"] = SCHEMA_VERSION
+    schema_version: Literal["1.0", "2.0"] = SCHEMA_VERSION
     name: str
     inputs: list[TensorArgument]
     scalars: list[ScalarArgument] = Field(default_factory=list)
@@ -301,6 +325,119 @@ class TargetProfile(BaseModel):
     compiler_version: str
     compiler_properties: dict[str, str] = Field(default_factory=dict)
     hardware_runner: list[str] | None = None
+    executor_warmup_count: int = Field(default=0, ge=0)
+    executor_measurement_count: int = Field(default=0, ge=0)
+
+
+class ValidationPolicy(str, Enum):
+    COMPILE_ONLY = "compile-only"
+    OFFLINE_VALIDATED = "offline-validated"
+    TARGET_EXECUTED = "target-executed"
+
+
+class StageResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    status: Literal["passed", "failed", "blocked", "unsupported", "not_requested"]
+    engine: str = ""
+    representation: str = ""
+    correct: bool | None = None
+    reason_code: str | None = None
+    error_category: str | None = None
+    message: str = ""
+    cases_run: int = Field(default=0, ge=0)
+    duration_seconds: float = Field(default=0.0, ge=0)
+    artifacts: dict[str, str] = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_status(self) -> StageResult:
+        if self.status in ("blocked", "unsupported", "not_requested") and self.correct is not None:
+            raise ValueError("unexecuted stages must have unknown correctness")
+        if self.status == "passed" and self.correct is False:
+            raise ValueError("a passed stage cannot have failed correctness")
+        return self
+
+
+class ValidationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    schema_version: Literal["2.0"] = "2.0"
+    candidate_id: str
+    target_id: str
+    source_sha256: str | None = None
+    manifest_sha256: str | None = None
+    input_sha256: dict[str, str] = Field(default_factory=dict)
+    toolchain_fingerprint: str | None = None
+    reference_origin: Literal["independent_builtin", "golden_fixture", "source_runtime"] | None = None
+    stages: dict[str, StageResult] = Field(default_factory=dict)
+    legacy: bool = False
+    policy: ValidationPolicy = ValidationPolicy.COMPILE_ONLY
+    policy_met: bool = False
+    offline_contract_met: bool = False
+    all_three_requirements_met: bool = False
+    hardware_latency_p50_ms: float | None = Field(default=None, ge=0)
+    estimated_latency_ms: float | None = Field(default=None, ge=0)
+
+
+class TensorPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dtype: str
+    shape: list[int]
+    data_base64: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ExecutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    run_id: str
+    target: TargetProfile
+    artifacts: dict[str, str]
+    artifact_sha256: dict[str, str]
+    manifest: KernelManifest
+    manifest_sha256: str
+    abi_sha256: str
+    cases: dict[str, dict[str, TensorPayload]]
+    compiler_fingerprint: str
+    timeout_seconds: int = Field(gt=0)
+    warmup_count: int = Field(default=0, ge=0)
+    measurement_count: int = Field(default=0, ge=0)
+    timing_scope: Literal["execution", "end_to_end"] = "execution"
+
+
+class ExecutionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    schema_version: Literal["1.0"] = "1.0"
+    run_id: str
+    target_id: str
+    hardware: str
+    executor_kind: Literal["binary_simulator", "physical_npu"]
+    executed_artifact_sha256: dict[str, str]
+    outputs: dict[str, dict[str, TensorPayload]]
+    logs: str
+    runtime_identity: str = Field(min_length=1)
+    compatibility_checked: Literal[True]
+    timing_samples_ms: list[float] = Field(default_factory=list)
+    warmup_count: int = Field(default=0, ge=0)
+    measurement_count: int = Field(default=0, ge=0)
+    timing_scope: Literal["execution", "end_to_end"] = "execution"
+    timing_provenance: str | None = None
+
+    @model_validator(mode="after")
+    def validate_timing(self) -> ExecutionResult:
+        if len(self.timing_samples_ms) != self.measurement_count:
+            raise ValueError("timing sample count mismatch")
+        if any(value < 0 for value in self.timing_samples_ms):
+            raise ValueError("latency cannot be negative")
+        if self.timing_samples_ms and not self.timing_provenance:
+            raise ValueError("timing requires provenance")
+        if not self.executed_artifact_sha256:
+            raise ValueError("execution requires artifact identities")
+        return self
 
 
 class CompileResult(BaseModel):
@@ -324,6 +461,7 @@ class CompileResult(BaseModel):
     hardware_iteration_count: int | None = None
     hardware_throughput_per_second: float | None = None
     static_metrics: dict[str, float] = Field(default_factory=dict)
+    validation: ValidationResult | None = None
 
 
 class Evaluation(BaseModel):
@@ -344,6 +482,7 @@ class Evaluation(BaseModel):
     artifact_bytes: int = 0
     duration_seconds: float = Field(default=0.0, ge=0)
     notes: list[str] = Field(default_factory=list)
+    validation: ValidationResult | None = None
 
 
 class Candidate(BaseModel):
@@ -367,7 +506,7 @@ class TargetResult(BaseModel):
     target: TargetProfile
     winner: Candidate | None
     candidates_evaluated: int
-    status: Literal["completed", "failed"]
+    status: Literal["completed", "failed", "blocked"]
     error: str | None = None
 
 
@@ -377,11 +516,12 @@ class TranslationRequest(BaseModel):
     source_path: str
     manifest_path: str
     targets: list[TargetProfile] = Field(min_length=1)
-    provider: Literal["openai", "codex-cli", "claude-cli"] = "openai"
+    provider: Literal["openai", "codex-cli", "claude-cli", "openrouter"] = "openai"
     model: str | None = None
     search_rounds: int = Field(default=3, ge=0, le=20)
     branching_factor: int = Field(default=3, ge=1, le=8)
     debug_retries: int = Field(default=2, ge=0, le=5)
+    validation_policy: ValidationPolicy = ValidationPolicy.COMPILE_ONLY
 
 
 class TranslationResult(BaseModel):
@@ -392,7 +532,7 @@ class TranslationResult(BaseModel):
     ir: KernelIR
     ir_validated: bool
     targets: list[TargetResult]
-    status: Literal["completed", "partial", "failed"]
+    status: Literal["completed", "partial", "failed", "blocked"]
     report_path: str
     duration_seconds: float = Field(default=0.0, ge=0)
 
@@ -402,7 +542,7 @@ class BaselineTargetResult(BaseModel):
 
     target: TargetProfile
     candidate: Candidate | None = None
-    status: Literal["completed", "failed"]
+    status: Literal["completed", "failed", "blocked"]
     error: str | None = None
     duration_seconds: float = Field(default=0.0, ge=0)
 
@@ -413,6 +553,6 @@ class BaselineResult(BaseModel):
     run_id: str
     kernel: str
     targets: list[BaselineTargetResult]
-    status: Literal["completed", "partial", "failed"]
+    status: Literal["completed", "partial", "failed", "blocked"]
     report_path: str
     duration_seconds: float = Field(default=0.0, ge=0)

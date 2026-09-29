@@ -1,0 +1,44 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:06:16.706346+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/4b3e14c89a0b4c3514118c37/report.json",
+  "source_report_sha256": "45000c79819dd92796195ffb1e8b88f06ac7b7f425721bac391ccc750f9c2394",
+  "metrics": {
+    "id": "4b3e14c89a0b4c3514118c37",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "amd_xdna2_npu2",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "blocked",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 0,
+    "input_tokens": null,
+    "output_tokens": null,
+    "reasoning_tokens": null,
+    "cached_input_tokens": null,
+    "usage_complete": false,
+    "timing_complete": true,
+    "active_seconds": 0.43643531100678956,
+    "llm_calls": 1,
+    "cycles": 1,
+    "backend_attempts": 0,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 0.42511909199674847
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "0ef35906e352132ca700b889ee1d90a251734846221472324faeef0544303f6a",
+      "failure_category": "infrastructure",
+      "subtype": "provider_http_429",
+      "evidence": "Provider HTTP 429; no generation identity or complete usage returned. No backend candidate compiled in this cycle. Billing-limit exhaustion is not established by this record.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Retained interrupted case; complete usage is unavailable for the final HTTP 429 call. Earlier parser failures, where present, do not demonstrate numerical incorrectness. The interrupted outcome does not establish model incapability."
+}

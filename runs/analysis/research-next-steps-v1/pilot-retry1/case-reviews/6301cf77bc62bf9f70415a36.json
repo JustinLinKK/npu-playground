@@ -1,0 +1,68 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:32:34.891408+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/6301cf77bc62bf9f70415a36/report.json",
+  "source_report_sha256": "f39f47be64a61d3e2f0a1a88bc904b70bc394d14cdb77beaeb1ca21b8797f69c",
+  "metrics": {
+    "id": "6301cf77bc62bf9f70415a36",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "intel_npu_4000",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "completed",
+    "offline_pass": true,
+    "success": true,
+    "known_tokens": 11231,
+    "input_tokens": 5753,
+    "output_tokens": 5478,
+    "reasoning_tokens": 4434,
+    "cached_input_tokens": 640,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 137.01046307799697,
+    "llm_calls": 4,
+    "cycles": 4,
+    "backend_attempts": 3,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 130.85292065600515
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "3833056a0c783c226125a74fefff5adb80aa8c8c6ba1f9795b08bdaed678e330",
+      "failure_category": "model_output",
+      "subtype": "missing_required_file",
+      "evidence": "Generated bundle omits required model.py.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "72c8aeb47f25f59969fc511aab73702dbf2c7c89116c028b28d45c92709d496e",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "6478e27b5167c775bf438f747f3a4754f0a908728c6bff6ef4b35ba763e70537",
+      "failure_category": "backend_api",
+      "subtype": "unsupported_keyword_argument",
+      "evidence": "transpose() rejects the generated axes keyword argument.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "a48a1b9e687470395a14dfc07eb5b00c5a01928eb60dea017720d2c9131b924d",
+      "failure_category": null,
+      "subtype": "offline_pass",
+      "evidence": "Target compilation and host correctness passed; physical NPU execution remains unvalidated.",
+      "numerical_validation_reached": true
+    }
+  ],
+  "interpretation": "Offline success after three construction/contract failures. This case began serially and resumed under the authorized parallel continuation; active time crosses execution modes and is not a pure parallel latency measurement. No physical NPU execution or performance evidence."
+}

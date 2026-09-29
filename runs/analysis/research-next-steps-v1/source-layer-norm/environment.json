@@ -1,0 +1,12 @@
+{
+  "python": "3.13.12 | packaged by Anaconda, Inc. | (main, Feb 24 2026, 16:13:31) [GCC 14.3.0]",
+  "executable": "/home/justin/GXG-opt/.venv-gpt2-v2/bin/python",
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2+-x86_64-with-glibc2.39",
+  "torch": "2.11.0+cu130",
+  "cuda": "13.0",
+  "triton": "3.6.0",
+  "device": "NVIDIA GeForce RTX 5090",
+  "manifest_sha256": "6218dd06c0e5eda7cf55d8bfce41ec1e8fe9fec76ba81fd7d44d08497922e6ed",
+  "adapter_sha256": "20fa55abbff6400035906f428a6313450c804c14fc3fc3242a7bfbfb4b2935da",
+  "command": "PYTHONPATH=src /home/justin/GXG-opt/.venv-gpt2-v2/bin/python scripts/validate_source.py examples/classic/06_triton_layer_norm/kernel.py --manifest examples/classic/06_triton_layer_norm/manifest.json --output runs/analysis/research-next-steps-v1/source-layer-norm"
+}

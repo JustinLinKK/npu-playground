@@ -10,7 +10,10 @@
 #
 # It does NOT emulate XDNA2 execution or predict cycle-accurate performance.
 
-FROM ubuntu:24.04
+FROM ubuntu@sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316
+
+COPY playground/toolchains.lock.json /opt/toolchains.lock.json
+COPY playground/tools /tools
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG MLIR_AIE_REF=v1.4.2
@@ -47,6 +50,7 @@ RUN apt-get update \
 # Keep the repository checkout and the mlir_aie wheel on the same release.
 RUN git clone --depth 1 --branch "${MLIR_AIE_REF}" \
         https://github.com/Xilinx/mlir-aie.git /opt/mlir-aie \
+    && test "$(git -C /opt/mlir-aie rev-parse HEAD)" = "760932a4abf084bfc7abdec851703b27a03c01ba" \
     && git -C /opt/mlir-aie submodule update --init --depth 1 \
         third_party/hrx-xclbinutil
 
@@ -66,13 +70,8 @@ ENV VIRTUAL_ENV=/opt/ironenv
 
 RUN python3.12 -m venv "${VIRTUAL_ENV}" \
     && "${VIRTUAL_ENV}/bin/python" -m pip install --upgrade pip \
-    && "${VIRTUAL_ENV}/bin/python" -m pip install \
-        -r /opt/mlir-aie/utils/peano-requirements.txt \
-    && MLIR_AIE_VERSION="${MLIR_AIE_REF#v}" \
-    && "${VIRTUAL_ENV}/bin/python" -m pip install \
-        "mlir_aie==${MLIR_AIE_VERSION}" \
-        -f "https://github.com/Xilinx/mlir-aie/releases/expanded_assets/${MLIR_AIE_REF}" \
-    && "${VIRTUAL_ENV}/bin/python" -m pip install pytest \
+    && "${VIRTUAL_ENV}/bin/python" /tools/install_locked.py peano_wheel mlir_aie_wheel \
+    && "${VIRTUAL_ENV}/bin/python" -m pip install numpy==2.5.2 ml_dtypes==0.6.0 pydantic==2.12.5 pytest==9.1.1 \
     && if [ "${INSTALL_TORCH}" = "1" ]; then \
          "${VIRTUAL_ENV}/bin/python" -m pip install torch \
            --index-url https://download.pytorch.org/whl/cpu; \
@@ -115,6 +114,13 @@ RUN mkdir -p /tmp/xdna2-smoke \
     && test -s /tmp/xdna2-smoke/insts.bin \
     && xclbinutil --info --input /tmp/xdna2-smoke/final.xclbin >/dev/null \
     && rm -rf /tmp/xdna2-smoke
+
+RUN python -c "import numpy, ml_dtypes, pydantic" \
+    && printf 'int main(){return 0;}\n' >/tmp/host-smoke.cc \
+    && g++ -fsanitize=address,undefined /tmp/host-smoke.cc -o /tmp/host-smoke \
+    && /tmp/host-smoke \
+    && rm /tmp/host-smoke /tmp/host-smoke.cc \
+    && python /tools/toolchain_metadata.py
 
 WORKDIR /workspace
 

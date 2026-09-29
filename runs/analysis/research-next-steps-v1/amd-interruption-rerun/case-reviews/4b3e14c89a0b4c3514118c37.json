@@ -1,0 +1,71 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T11:20:14.763793+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-amd-interruption-rerun-retry1/cases/4b3e14c89a0b4c3514118c37/report.json",
+  "source_report_sha256": "399887efe9dd9303a4ddb1119dc814f53136ac18c080a1a50258c7238c6151a0",
+  "metrics": {
+    "id": "4b3e14c89a0b4c3514118c37",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "amd_xdna2_npu2",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "blocked",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 50861,
+    "input_tokens": null,
+    "output_tokens": null,
+    "reasoning_tokens": null,
+    "cached_input_tokens": null,
+    "usage_complete": false,
+    "timing_complete": true,
+    "active_seconds": 617.7018151849988,
+    "llm_calls": 5,
+    "cycles": 5,
+    "backend_attempts": 4,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 609.2195263200119
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "b5a3b758ed748c588cf7197d1c5babebdfe58c901734a27e332fb82e7ee02c98",
+      "failure_category": "backend_api",
+      "evidence": "Cannot import MLIRContext from iron.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "3110ab1508ab6f096212ca770c4e64ac91afb25f97c8ebe7f1388fe17bdebdf5",
+      "failure_category": "backend_api",
+      "evidence": "No module named mlir.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "550cd7da851c82b22156071037d267283e73936c6393dbd28809b2215032edce",
+      "failure_category": "backend_api",
+      "evidence": "Unknown MLIR operation aie.chip.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "9da589683b3acbbed08199dd252c77bf9b31a2800dae74372285cc1a142d7eea",
+      "failure_category": "backend_api",
+      "evidence": "Unknown MLIR operation aie.design.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "896475e38a14bace5d5bbfdfb5d2f473a7732c7d0ad62667e488ab31c69ef9e2",
+      "failure_category": "infrastructure",
+      "evidence": "Provider HTTP 429 with no usage/generation identity. No candidate compiled in this cycle.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Fresh replacement also interrupted by HTTP 429 after four backend-construction failures. This slot remains unresolved; no numerical correctness conclusion or zero-cost assumption follows."
+}

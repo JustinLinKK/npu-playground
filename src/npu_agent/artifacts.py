@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import tempfile
 from pathlib import Path
 
 from .models import Backend, CodeBundle
@@ -24,7 +25,13 @@ def store_artifact(path: Path, store_root: Path) -> tuple[Path, str]:
     destination = store_root / digest[:2] / digest
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
-        shutil.copyfile(path, destination)
+        with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+        try:
+            shutil.copyfile(path, temporary)
+            temporary.replace(destination)
+        finally:
+            temporary.unlink(missing_ok=True)
     return destination, digest
 
 

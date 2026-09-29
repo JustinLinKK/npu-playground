@@ -1,0 +1,14 @@
+{
+  "torch": "2.11.0+cu130",
+  "cuda": "13.0",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "nvrtc_library": "/home/justin/miniconda3/lib/python3.13/site-packages/nvidia/cu13/lib/libnvrtc.so.13",
+  "nvrtc_sha256": "a49e67e8e74590f1e98de55c39c6287efd3f59e3c3797464d7bbe0fe01349b11",
+  "adapter_sha256": "29042cc1018ff8fc4c91d35d7cac95b29e080ccb4d3ffd52342906acb172780a",
+  "selection_sha256": "bee5c600f36f55c19a61db05a4eec1f469f6b36ac5ca4ff96eece7b65a959e45",
+  "compiler_options": [
+    "--std=c++17",
+    "--gpu-architecture=sm_120"
+  ],
+  "evidence_scope": "Original GPU source on finite manifest inputs; no NPU execution or universal equivalence claim."
+}

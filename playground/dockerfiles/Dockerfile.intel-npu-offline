@@ -8,7 +8,10 @@
 # It does NOT provide functional or cycle-accurate NPU emulation, and it does
 # not provide a public SDK for arbitrary SHAVE/ActShave software kernels.
 
-FROM ubuntu:24.04
+FROM ubuntu@sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316
+
+COPY playground/toolchains.lock.json /opt/toolchains.lock.json
+COPY playground/tools /tools
 
 ARG OPENVINO_VERSION=2026.3.1
 ARG OPENVINO_BUILD=22476.56d9685302d
@@ -41,6 +44,7 @@ WORKDIR /opt/intel
 RUN archive="openvino_toolkit_ubuntu24_${OPENVINO_VERSION}.${OPENVINO_BUILD}_x86_64.tgz" \
     && archive_url="https://storage.openvinotoolkit.org/repositories/openvino/packages/${OPENVINO_VERSION}/linux/${archive}" \
     && curl --fail --location --retry 5 --output "/tmp/${archive}" "${archive_url}" \
+    && echo "cb84d1ccdecb8bd90337edf63e8d081a17cde2fc72f5e9feb213b5b2f96eb21b  /tmp/${archive}" | sha256sum -c - \
     && tar -xzf "/tmp/${archive}" -C /opt/intel \
     && mv "/opt/intel/openvino_toolkit_ubuntu24_${OPENVINO_VERSION}.${OPENVINO_BUILD}_x86_64" \
           "/opt/intel/openvino_${OPENVINO_VERSION}" \
@@ -52,7 +56,11 @@ RUN archive="openvino_toolkit_ubuntu24_${OPENVINO_VERSION}.${OPENVINO_BUILD}_x86
 RUN /opt/intel/openvino_2026/install_dependencies/install_openvino_dependencies.sh -y \
     && python -m pip install --no-cache-dir \
         -r /opt/intel/openvino_2026/python/requirements.txt \
-        pytest
+        numpy==2.5.2 pydantic==2.12.5 pytest==9.1.1
+
+RUN source /opt/intel/openvino_2026/setupvars.sh >/dev/null \
+    && python -c "import openvino, numpy, pydantic; assert 'CPU' in openvino.Core().available_devices" \
+    && python /tools/toolchain_metadata.py
 
 WORKDIR /work
 

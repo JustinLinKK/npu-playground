@@ -1,0 +1,137 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T08:40:01.048372+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/8ddb012acb4526407fe6f664/report.json",
+  "source_report_sha256": "e116df72ce8334f706bceff2f0b7a846aa8958a68d0b89064ec0ef41b6eed5f0",
+  "metrics": {
+    "id": "8ddb012acb4526407fe6f664",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "amd_xdna2_npu2",
+    "arm": "structured_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 86392,
+    "input_tokens": 43781,
+    "output_tokens": 42611,
+    "reasoning_tokens": 30430,
+    "cached_input_tokens": 13056,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 866.789102099996,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 10,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 837.0116845970042
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "4b95944f307fb28e6d5fbc383356b68c13773b0ab9d42659ec16780d656d2165",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Inferred sym_visibility attribute explicitly specified in func.func.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": null,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "318a2bed058ddc14712b352a8565aac87e8c7dbe286ff4bc108b7e84d3c365d4",
+      "failure_category": "backend_api",
+      "subtype": "python_syntax",
+      "evidence": "Unterminated Python triple-quoted string in generated design.py.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "85020ca310bda83138eabcaf5e0955e9c1401caddf0e1d0cf267be5cd8642728",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected operation name in quotes.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "89e2696366cc850ae37e00ca708632de416be488afaa03a29e6d895c97158ab4",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR unexpected character.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "907f85d616cbbd9d5fa2ab34fd742ad94f4d79d265ce039a4ebcc1098ce01c97",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "8fe4d5bc6c92cecf1e266f3309c9c7527dc8d66978efc3060b45c6de804f5d43",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "a1459327837f09400ac1c1cc7a947be4e77f5619a041013ecd465d7cb5618e98",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "1df6f2032c7cdbb108136df1599ceea41b39761efa8b3071029e8734f882b41f",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "43c537ab3ff1a252a1b7dfe99a44270715c7a5d095b4211bc9160cf2f8d63eda",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "e9ea96f23c4534e5d044a11b185e1d75b2e317b0233a8626467dea5adf3e2409",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Unknown aie.memory operation.",
+      "semantic_validation": "passed",
+      "intermediate_reused_from": 1,
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Finite semantic validation passed once and was reused for all nine repairs. All ten backend attempts failed during Python generation or MLIR parsing. This establishes a backend construction failure for this case, not IR efficiency or a general mechanism advantage.",
+  "terminal_reason": "budget_exhausted"
+}

@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-09-17T07:28:31.535677+00:00",
+  "command": ".venv/bin/python -m pytest",
+  "exit_code": 0,
+  "passed": 246,
+  "skipped": 25,
+  "duration_seconds": 27.61,
+  "git_diff_check": "passed",
+  "implementation_sha256": {
+    "research/run_budgeted_study.py": "1d6dda35b25ae4b79cf9600ae760b88e60582ed1339f9f0e8cf00b71a5c203ae",
+    "research/audit_v1.py": "422e9e5d5b203030572cafd698841034db61bb8736d764c1a4e37a9d54c77b77",
+    "research/hidden_evaluation.py": "0e07fc99521022e7a40be7435921d41effe65fe8d16e9b80d6a2531711e7b038",
+    "research/diagnostic_v1.py": "e0aefb522bfa35b5c1368122cd2487d43d9aa75f1a8f3b98f080e0a1e5e59eda",
+    "src/npu_agent/study_v4_provider.py": "346a912cf4ffc4bc446456f8e6a006c340a06793b50f64a84882b3a221b28edb"
+  },
+  "evidence_limits": [
+    "Tests do not complete the interrupted pilot or resolve missing provider accounting.",
+    "Synthetic hidden-input tests are not a confirmatory evaluation.",
+    "Real backend fixture validation passed in the earlier archived preflight.",
+    "Original GPU layer-normalization source failed one of twelve independent-contract cases."
+  ]
+}

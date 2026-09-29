@@ -1,0 +1,60 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:36:59.095102+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/49ad67beae29c7c5b1484eaa/report.json",
+  "source_report_sha256": "1874bb0067cd4369fdd1de465c0dbedfb5c715a470c0cf2ec9f3c1afc608eed0",
+  "metrics": {
+    "id": "49ad67beae29c7c5b1484eaa",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "intel_npu_4000",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "completed",
+    "offline_pass": true,
+    "success": true,
+    "known_tokens": 22078,
+    "input_tokens": 9281,
+    "output_tokens": 12797,
+    "reasoning_tokens": 10134,
+    "cached_input_tokens": 1536,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 271.03008592400147,
+    "llm_calls": 4,
+    "cycles": 3,
+    "backend_attempts": 3,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 264.8336283019962
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "a1200321a3b8fa0842c2a33256d714361677ea8b113c9e06a3bba995b334ce33",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as the shape argument; graph construction rejects incompatible constructor arguments.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "7065d50e663f222a975ebcd9acb29f223ea3bbfed311585501be077b7f1d688c",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as the shape argument; graph construction rejects incompatible constructor arguments.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "69fd59bb682902d0ac8dc7bb78b2bdf56d25ddaf466da929249b0adaecc287ad",
+      "failure_category": null,
+      "subtype": "offline_pass",
+      "evidence": "Target compilation and host correctness passed; physical NPU execution remains unvalidated.",
+      "numerical_validation_reached": true
+    }
+  ],
+  "interpretation": "Parallel-run offline success after two backend API failures. No physical NPU execution or performance evidence."
+}

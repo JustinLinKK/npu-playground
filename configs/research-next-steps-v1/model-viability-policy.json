@@ -1,0 +1,28 @@
+{
+  "protocol": "model-viability-policy-v1",
+  "purpose": "Prospective operational criterion for considering a replacement primary model if the completed pilot cannot support the intended comparison.",
+  "primary_config": "configs/case-study-v4.json",
+  "timing": "Declared during the primary pilot, before selecting or evaluating any replacement model. The primary model and active pilot remain unchanged.",
+  "trigger": "Review the completed pilot by backend. If no arm produces an offline-valid translation on a backend, investigate backend/model viability before scaling. Infrastructure interruptions alone do not establish model incapability.",
+  "qualification": {
+    "preflight": "Both compiler fixtures and all three paid schema probes must pass, with the requested route and reasoning telemetry.",
+    "direct_baseline": "At least one direct-arm offline-valid result on each of AMD and Intel for vector addition or transpose, within the existing case token, active-time and cycle budgets.",
+    "reason": "These two kernels have passing original-source runtime evidence. A working direct baseline on both backends permits a meaningful comparison without choosing a model for a favorable IR-versus-direct difference.",
+    "retain_coverage": "Run and report the complete unchanged three-kernel, two-target, three-arm pilot for each candidate. Layer normalization and every failed, unsupported or interrupted case remain visible; qualification does not remove them from reported coverage.",
+    "unknowns": "Missing usage or timing cannot establish a budget-qualified success. An interrupted candidate is unresolved, not a model failure. Qualifying on development cases is not confirmatory evidence."
+  },
+  "candidate_selection": {
+    "ordering": "Before paid candidate evaluation, archive a finite ordered list of open-weight model IDs, licenses, provider routes, reasoning settings and sampling settings. Do not add or reorder candidates in response to an observed IR advantage.",
+    "selection": "Use the first candidate in that archived order satisfying the qualification criterion. Do not rank candidates by the difference between arms or pool model-specific token/time comparisons.",
+    "failure": "If no candidate qualifies within available billing allowance, preserve the negative results and limit the research conclusion to observed backend/model failures. Do not claim a controlled efficiency advantage."
+  },
+  "frozen_controls": [
+    "source and manifest hashes",
+    "three primary arms and their prompts",
+    "compiler identities and offline acceptance criteria",
+    "case token, active-time and cycle budgets",
+    "kernel/target coverage and schedule construction"
+  ],
+  "execution_gate": "No replacement-model experiment before completion and review of the primary pilot. A new model requires a separate campaign; preserve all prior evidence and spending.",
+  "declared_at": "2026-09-17T08:42:07.994815+00:00"
+}

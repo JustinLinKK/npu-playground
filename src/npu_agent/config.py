@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .models import Backend, TargetProfile
+from .models import Backend, TargetProfile, ValidationPolicy
 
 
 AMD_XDNA2_NPU2 = TargetProfile(
@@ -13,7 +13,7 @@ AMD_XDNA2_NPU2 = TargetProfile(
     hardware="npu2",
     compiler_image="npu-playground-amd-xdna2:v1.4.2",
     compiler_version="mlir-aie-v1.4.2",
-    compiler_properties={"device": "npu2", "architecture": "aie2p"},
+    compiler_properties={"device": "npu2", "architecture": "aie2p", "kernel_optimization": "2"},
 )
 
 INTEL_NPU_4000 = TargetProfile(
@@ -38,6 +38,11 @@ class Settings:
     model: str | None = None
     provider_timeout_seconds: int = 900
     compiler_timeout_seconds: int = 1200
+    validation_policy: ValidationPolicy = ValidationPolicy.COMPILE_ONLY
+    docker_executable: str = "docker"
+    compiler_cpus: int = 4
+    compiler_memory: str = "8g"
+    max_compiler_jobs: int = 2
     max_generated_bytes: int = 2_000_000
     experiment_id: str | None = None
     role_providers: dict[str, str] = field(default_factory=dict)

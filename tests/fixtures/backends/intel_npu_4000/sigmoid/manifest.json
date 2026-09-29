@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "name": "sigmoid",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "vector_add",
+  "tensors": [
+    {
+      "name": "x",
+      "direction": "input",
+      "dtype": "float32",
+      "shape": [
+        64
+      ]
+    },
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float32",
+      "shape": [
+        64
+      ]
+    }
+  ],
+  "scalars": [],
+  "constraints": [],
+  "tolerance": {
+    "rtol": 0.0001,
+    "atol": 0.001,
+    "equal_nan": false
+  },
+  "seed": 0,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "sigmoid",
+    "parameters": {}
+  },
+  "provenance": {
+    "repository": "https://github.com/NVIDIA/cuda-samples",
+    "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc",
+    "path": "cpp/0_Introduction/vectorAdd/vectorAdd.cu",
+    "license": "BSD-3-Clause"
+  }
+}

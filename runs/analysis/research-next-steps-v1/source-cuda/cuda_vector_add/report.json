@@ -1,0 +1,171 @@
+{
+  "status": "passed",
+  "correct": true,
+  "representation": "original_gpu_source",
+  "engine": "nvrtc-cuda-driver-torch",
+  "cases_run": 12,
+  "duration_seconds": 0.07695266500377329,
+  "details": {
+    "source_sha256": "328aebd59d0e5ac490f73eca2dda155c6122a433afbb24aa494f7ce162efa591",
+    "manifest_sha256": "f4e24cd742a92407f4f45520cbf4c216fcaca609ec02b294f607b0e88b528674",
+    "cubin_sha256": "1bbdb0c4c5c4a4282dd5beb4c45e6b62b3771fbfdaf8808a19a5e42c6f60ef32",
+    "comparisons": [
+      {
+        "test_id": "normal-0",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-1",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-2",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-3",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-4",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "zeros",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "positive",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "mixed",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "alternating",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "cancellation",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "dynamic_range",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "operation_boundary",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T11:26:45.602032+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-amd-interruption-rerun-retry1/cases/90ad131dfb260c253c26eed0/report.json",
+  "source_report_sha256": "2e3cf0585dfe5bd0860ddfcaaad0ce95fce49e1d5e6180785efbea76bc28d0a0",
+  "metrics": {
+    "id": "90ad131dfb260c253c26eed0",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "amd_xdna2_npu2",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 97167,
+    "input_tokens": 40324,
+    "output_tokens": 56843,
+    "reasoning_tokens": 40856,
+    "cached_input_tokens": 5248,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 1134.4346825159955,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 10,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 1104.627019439984
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "b731c90149ac31949eda3b79222cf99b231fd2f3ea44c15b175084d2e2796b6c",
+      "failure_category": "backend_api",
+      "evidence": "ModuleNotFoundError: No module named 'shim_mlir_aie'",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "ddcf30e854070048aeea9c29cea9d23d508767d03d9f65af1905b308fda3a15c",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":15:11: custom op 'aiex.herd' is unknown",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "7156b151063cfe5cf51d355558d8bbdb7b32546a1241515de9864f2973b45827",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":7:17: custom op 'aie.buffer_desc' is unknown",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "85fd031828f676378b4d0041a1325ed9f224eb0c7bc26bd0d65202dff8e26706",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":11:28: custom op 'aie.objectfifo' expected valid '@'-identifier for symbol name",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "a0325de1170f65e89196e4bcb8fc5f20062c627253ecd119b208417a02aa5e3c",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":8:16: custom op 'aie.externalBuffer' is unknown",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "221265f5d1b0cb3f224f754d92e546b0e33ae106bf3ff30c59aa55e5fb77ec5b",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":29:34: expected SSA operand",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "0815fbef8ae59841943a6cd31b425e8e279f78ffeb0d4eaf07772182ae3c337d",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":29:19: custom op 'affine.apply' dimension or symbol index mismatch",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "987f62a637bf8cace9dc0b379695b756052bf7fd52cf72aa23051752c1622c89",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":23:35: custom op 'scf.for' expected 'step'",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "ccd8f737d6ea28700a31b34854b8111c57966219398932572e8767c318b6e30d",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":52:24: expected ':'",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "d22aab7470b0e47fd3fb89ff55ad26ed8cc8767508de8303a3d2a884f958b655",
+      "failure_category": "backend_api",
+      "evidence": "error: \"-\":57:21: expected ')'",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Completed ten-cycle budget without offline success. One missing module and nine MLIR parse failures prevented numerical execution. Graceful pause after direct HTTP429 preserved and reused the saved hinted response."
+}

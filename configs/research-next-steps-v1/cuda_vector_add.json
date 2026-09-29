@@ -1,0 +1,75 @@
+{
+  "schema_version": "2.0",
+  "name": "cuda_vector_add",
+  "inputs": [
+    {
+      "name": "x",
+      "direction": "input",
+      "dtype": "float32",
+      "shape": [
+        4096
+      ],
+      "layout": "row_major"
+    },
+    {
+      "name": "y",
+      "direction": "input",
+      "dtype": "float32",
+      "shape": [
+        4096
+      ],
+      "layout": "row_major"
+    }
+  ],
+  "scalars": [
+    {
+      "name": "n",
+      "dtype": "int32",
+      "value": 4096
+    }
+  ],
+  "outputs": [
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float32",
+      "shape": [
+        4096
+      ],
+      "layout": "row_major"
+    }
+  ],
+  "iteration_domains": [
+    {
+      "variables": [
+        "i"
+      ],
+      "bounds": [
+        "0 <= i < 4096"
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "operation",
+      "op": "add",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "output": "output",
+      "attributes": {
+        "keepdims": false
+      }
+    }
+  ],
+  "preconditions": [
+    "output[i] = x[i] + y[i] for 0 <= i < n",
+    "inputs do not alias output"
+  ],
+  "side_effects": [],
+  "numeric_behavior": [],
+  "source_evidence": [
+    "The source writes x[i]+y[i] for i<n; the fixed manifest binds n=4096 and disallows output aliasing."
+  ]
+}

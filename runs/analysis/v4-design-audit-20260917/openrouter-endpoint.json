@@ -1,0 +1,25 @@
+{
+  "model": "deepseek/deepseek-v3.2",
+  "license": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2/blob/main/LICENSE",
+  "tag": "alibaba/fp8",
+  "provider_name": "Alibaba",
+  "quantization": "fp8",
+  "context_length": 131072,
+  "max_completion_tokens": 65536,
+  "supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "max_tokens",
+    "presence_penalty",
+    "reasoning",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_k",
+    "top_p"
+  ]
+}

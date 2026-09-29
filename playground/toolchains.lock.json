@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "dependency_closure": "top-level archives and wheels pinned; distro apt dependencies are not a snapshot",
+  "amd": {
+    "mlir_aie_commit": "760932a4abf084bfc7abdec851703b27a03c01ba",
+    "iron_commit": "0d9ebcdd72f5eb85858ddfb0060cf463bedccf02",
+    "hrx_xclbinutil_commit": "3940dd23bda7a941df9f2d10015fd66c9410b7af",
+    "mlir_aie_wheel": {
+      "url": "https://github.com/Xilinx/mlir-aie/releases/download/v1.4.2/mlir_aie-1.4.2-cp312-cp312-manylinux_2_35_x86_64.whl",
+      "sha256": "e321c6f964e82310cff7b0ab072bdf2cdbcedbe357ec7df052b8193e30c1ead0"
+    },
+    "peano_wheel": {
+      "url": "https://github.com/Xilinx/llvm-aie/releases/download/nightly/llvm_aie-21.0.0.2026080301%2Bc9c5ecb7-py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "5a6c27c5517244040a4dc34e0c1fa976f2bdb6e14b29a35542236f66e89b1375"
+    },
+    "observed_pre_upgrade_image_id": "sha256:ae9eee689d5eaf6c2bd26a20301eb48390bfa98fd82aaeb6ec4116ed834cbc9d",
+    "python_packages": [
+      "aiofiles==25.1.0",
+      "cloudpickle==3.1.2",
+      "eudsl-python-extras @ file:///tmp/tmpw7zly9zp/download/eudsl_python_extras-0.1.0.20260801.905%2B68a0d7a.tar.gz#sha256=e8672fd1b71c4aba56a80fb724a756337d299a4e706a90ceff435138867213c2",
+      "iniconfig==2.3.0",
+      "iron==0.1.0",
+      "llvm-aie==21.0.0.2026080301+c9c5ecb7",
+      "markdown-it-py==4.2.0",
+      "mdurl==0.1.2",
+      "ml_dtypes==0.6.0",
+      "mlir-aie==1.4.2",
+      "numpy==2.5.2",
+      "packaging==26.3",
+      "pluggy==1.6.0",
+      "Pygments==2.21.0",
+      "pytest==9.1.1",
+      "rich==15.0.0"
+    ]
+  },
+  "intel": {
+    "archive": {
+      "url": "https://storage.openvinotoolkit.org/repositories/openvino/packages/2026.3.1/linux/openvino_toolkit_ubuntu24_2026.3.1.22476.56d9685302d_x86_64.tgz",
+      "sha256": "cb84d1ccdecb8bd90337edf63e8d081a17cde2fc72f5e9feb213b5b2f96eb21b"
+    },
+    "observed_pre_upgrade_image_id": "sha256:cd1a953eaa212ba17f625b088af828142d5d43976cd29d41de821bbced0646ad",
+    "python_packages": [
+      "iniconfig==2.3.0",
+      "numpy==2.5.2",
+      "openvino-telemetry==2025.2.0",
+      "packaging==26.3",
+      "pluggy==1.6.0",
+      "Pygments==2.21.0",
+      "pytest==9.1.1",
+      "setuptools==84.0.0",
+      "wheel==0.48.0"
+    ]
+  },
+  "base_image": "ubuntu@sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316",
+  "evaluator_packages": {
+    "numpy": "2.5.2",
+    "pydantic": "2.12.5",
+    "ml_dtypes": "0.6.0"
+  }
+}

@@ -1,0 +1,3 @@
+id,kernel,family,target,arm,repetition,status,offline_pass,success,known_tokens,input_tokens,output_tokens,reasoning_tokens,cached_input_tokens,usage_complete,timing_complete,active_seconds,llm_calls,cycles,backend_attempts,semantic_failures,identical_backend_pairs,length_finishes,model_seconds
+90ad131dfb260c253c26eed0,cuda_tiled_transpose,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,failed,False,False,97167,40324,56843,40856,5248,True,True,1134.4346825159955,11,10,10,0,0,0,1104.627019439984
+4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,blocked,False,False,50861,,,,,False,True,617.7018151849988,5,5,4,0,0,0,609.2195263200119

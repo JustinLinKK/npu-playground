@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T09:42:35.337253+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/cdf9ca1768e04abd3b8125d5/report.json",
+  "source_report_sha256": "91f7b45d172f21a2bdba06f75916e8e391fa361d16791c9c18972875cf0f84c8",
+  "metrics": {
+    "id": "cdf9ca1768e04abd3b8125d5",
+    "kernel": "cuda_vector_add",
+    "family": "cuda_vector_add",
+    "target": "amd_xdna2_npu2",
+    "arm": "structured_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 79689,
+    "input_tokens": 34376,
+    "output_tokens": 45313,
+    "reasoning_tokens": 35265,
+    "cached_input_tokens": 10496,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 865.4093873499951,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 8,
+    "semantic_failures": 1,
+    "identical_backend_pairs": 1,
+    "length_finishes": 0,
+    "model_seconds": 843.7712932490031
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "e4c1ee920f5767c890f0cf1c9a20d11b7bdb679fcd28f7e9cec355bb5daa8cc3",
+      "failure_category": "unsupported_ir",
+      "evidence": "Unsupported executable index_expression in initial IR.",
+      "intermediate_reused_from": null,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "0fa06bb843ff9ba064eb02cd16d0181518d29fd2cde26f615cb57d6685d11e66",
+      "failure_category": "backend_api",
+      "evidence": "Semantic IR passed, but generated bundle included forbidden manifest.tensors file.",
+      "intermediate_reused_from": null,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "133ceb90283a27872ff57bc994a99071f017e5b2a9700e60e55d0ca0ff14bf9c",
+      "failure_category": "backend_api",
+      "evidence": "Cannot import aie from iron.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "366d5f7ef265986f0285f333f2422d6395f4951af601b152f94cdfc1a10a7e22",
+      "failure_category": "backend_api",
+      "evidence": "Unavailable mlir Python module.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "fd39192571cb3f6f6887d95d3349cb437db190ff33246b14907eb6fc0d0b0cad",
+      "failure_category": "backend_api",
+      "evidence": "MLIR expected SSA operand.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "2b655cb5e53a0e46cc2429dc3b9c9aa4d47873c5d7f8d45fa60134cf80a8e5b5",
+      "failure_category": "backend_api",
+      "evidence": "MLIR expected SSA operand.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "2ff3d1b38db114a968307248af4c9f715136d0516b7e9e19b4265815fc51fbc4",
+      "failure_category": "backend_api",
+      "evidence": "Required single target device declaration missing.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "ad53443f2d5f3cc58b8284ffbaea2bd33b602a382b4b449ff5ab2a291de41aa7",
+      "failure_category": "backend_api",
+      "evidence": "Required single target device declaration missing.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "4480f90cd9644d4d8efaf22c61f8d938693519bb95de46d0ccd54fe32661e664",
+      "failure_category": "backend_api",
+      "evidence": "Required single target device declaration missing.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "a286a495ae495ae178bd71205a487758776e6581282657db395122861b832e2d",
+      "failure_category": "backend_api",
+      "evidence": "MLIR expected SSA operand.",
+      "intermediate_reused_from": 2,
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Initial IR used unsupported executable syntax. Replacement IR passed finite semantic validation and was reused from cycle 2 onward; subsequent generated-file and backend construction failures prevented numerical validation. This case does not establish the proposed two-input/three-buffer checked-lowering acceptance example because construction failed earlier."
+}

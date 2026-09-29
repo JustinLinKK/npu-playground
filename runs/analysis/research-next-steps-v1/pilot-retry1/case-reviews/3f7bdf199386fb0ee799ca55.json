@@ -1,0 +1,314 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:43:08.147164+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/3f7bdf199386fb0ee799ca55/report.json",
+  "source_report_sha256": "6506c1a7a30a284e7164fe26a50f6c66ec75287b46f84a3fe1ca3824a3b80a21",
+  "metrics": {
+    "id": "3f7bdf199386fb0ee799ca55",
+    "kernel": "triton_layer_norm",
+    "family": "triton_layer_norm",
+    "target": "intel_npu_4000",
+    "arm": "structured_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 65314,
+    "input_tokens": 32583,
+    "output_tokens": 32731,
+    "reasoning_tokens": 24427,
+    "cached_input_tokens": 8064,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 687.0252179609961,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 7,
+    "semantic_failures": 2,
+    "identical_backend_pairs": 1,
+    "length_finishes": 0,
+    "model_seconds": 668.7685339029922
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "c0f921da61eeb1aaf62a0037a8089ceaceee55070e0b87d62a75c9bc992d6c8b",
+      "failure_category": "model_output",
+      "subtype": "ir_schema",
+      "evidence": "IR does not produce declared output; replaying the saved response reproduces schema rejection.",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "eeb99f9442002be89968c9a1f0e1b6ba0ef0e7db8ab11c5952ceb8f7d4671a14",
+      "failure_category": "semantic",
+      "subtype": "execution_error",
+      "evidence": "not enough values to unpack (expected 3, got 1)",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "ab3f0625b750d6b28cdf72fa82bfe8c65a0b000207f7f5b96f244c6fbaa2c4bb",
+      "failure_category": "semantic",
+      "subtype": "semantic_mismatch",
+      "evidence": "IR mismatch: {'test_id': 'normal-0', 'correct': False, 'outputs': {'output': {'correct': False, 'mismatch_count': 2048, 'max_absolute_error': 5.828349828720093, 'max_scaled_error': 2940588.3716539713, 'first_failing_indices': [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7]]}}}",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "d71859a8520c83fbf031c0204d5a5ea1d3073e8104081033513617f766bfa9f9",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "AttributeError: module 'openvino.opset13' has no attribute 'layer_norm'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "89f944266ec923db7249fc9cb23dca537c3f141fb07cc8f9e9ff8afd638c4b5b",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "TypeError: reduce_mean() got an unexpected keyword argument 'keepdims'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "f66a254090ddb174bb576b73ead0f0f734b4c099286dd9f9cff98baf2c678192",
+      "failure_category": "backend_api",
+      "subtype": "graph_construction",
+      "evidence": "TypeError: broadcast() got an unexpected keyword argument 'axes'",
+      "numerical_validation_reached": false,
+      "failed_comparisons": []
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "05356ba41594215972ea146af668a8c874341d077d5afd881e5ae34379c16c10",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "64a47a5af7e2478935ea281f67dc51f8c80d3f1a012077c5b0ca639b8803b0c7",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "60c38969b9eeb1cfa850d3ebf0b2ba79301ffb822af92533dd747c6aa91443df",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "8de6686ed17a9c2dbb50aa3dd9c70bf5176086bad7d64efb15c8afd731c55632",
+      "failure_category": "numerical",
+      "subtype": "operation_boundary_tolerance",
+      "evidence": "Only operation_boundary fails: 1280 mismatches, max absolute error 1.5020370483398438e-05; other 11 inputs pass.",
+      "numerical_validation_reached": true,
+      "failed_comparisons": [
+        {
+          "test_id": "operation_boundary",
+          "correct": false,
+          "outputs": {
+            "output": {
+              "correct": false,
+              "mismatch_count": 1280,
+              "max_absolute_error": 1.5020370483398438e-05,
+              "max_scaled_error": 1.365878858816452,
+              "first_failing_indices": [
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  1,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  1,
+                  7
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "interpretation": "IR passed in cycle 4 and was reused during backend repair. Four later candidates reach host numerical testing but fail only the boundary case with the original-source discrepancy metrics. Frozen acceptance remains failed; finite matching error metrics do not prove source equivalence."
+}

@@ -16,6 +16,7 @@ dependencies = [
   "matplotlib>=3.10,<4",
   "numpy>=2.1,<3",
   "pydantic>=2.10,<3",
+  "PyYAML>=6,<7",
 ]
 
 [project.optional-dependencies]
@@ -33,3 +34,8 @@ packages = ["src/npu_agent"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+markers = [
+  "container: real vendor container validation (NPU_AGENT_CONTAINER_TESTS=1 makes Docker mandatory)",
+  "amd_sim: AMD host/dataflow model tests",
+  "requires_npu: requires a configured physical target executor",
+]

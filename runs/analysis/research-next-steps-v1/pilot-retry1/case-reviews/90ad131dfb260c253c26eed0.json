@@ -1,0 +1,76 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:06:16.705915+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/90ad131dfb260c253c26eed0/report.json",
+  "source_report_sha256": "d5430d3079172bfbf5e2389e4456f08b44a7d6e3546e58986123099bbdd9587f",
+  "metrics": {
+    "id": "90ad131dfb260c253c26eed0",
+    "kernel": "cuda_tiled_transpose",
+    "family": "cuda_tiled_transpose",
+    "target": "amd_xdna2_npu2",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "blocked",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 56057,
+    "input_tokens": null,
+    "output_tokens": null,
+    "reasoning_tokens": null,
+    "cached_input_tokens": null,
+    "usage_complete": false,
+    "timing_complete": true,
+    "active_seconds": 646.8857518670047,
+    "llm_calls": 6,
+    "cycles": 5,
+    "backend_attempts": 4,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 633.813685414003
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "c99c511af8a53e6721ba875a7567bd3f6132cdbe6b68875b61997c3f9f93d283",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "error: \"-\":1:33: expected attribute value",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "9508de612decb5eb383f1d82b1f382976e74b9bec8fb55eef626059de21ad55b",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "error: \"-\":1:32: expected attribute value",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "1806cdcdc031e9c82b57d715d6f4f0e9e243ac73ca7ce3a144ea051d2aa6d9c2",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "error: \"-\":1:32: expected attribute value",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "c586365afc812fbbe72de3efe1ff4594bf66eb487092a824dd769ee3efb85729",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "error: \"-\":2:11: expected '('",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "e5e5882133986dfd72e91dfb052c8c81d2b0f0567aefd41d8efa10f9dd8a3e7c",
+      "failure_category": "infrastructure",
+      "subtype": "provider_http_429",
+      "evidence": "Provider HTTP 429; no generation identity or complete usage returned. No backend candidate compiled in this cycle. Billing-limit exhaustion is not established by this record.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Retained interrupted case; complete usage is unavailable for the final HTTP 429 call. Earlier parser failures, where present, do not demonstrate numerical incorrectness. The interrupted outcome does not establish model incapability."
+}

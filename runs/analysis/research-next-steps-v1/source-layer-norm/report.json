@@ -1,0 +1,207 @@
+{
+  "status": "failed",
+  "engine": "triton-3.6.0",
+  "representation": "original_gpu_source",
+  "correct": false,
+  "reason_code": null,
+  "error_category": "numerical_mismatch",
+  "message": "",
+  "cases_run": 12,
+  "duration_seconds": 2.92637548300263,
+  "artifacts": {},
+  "details": {
+    "source_sha256": "bb0829b7f7649225a38698ca54a0bc6c6cd7b81457340dfc90655b41cef2f075",
+    "reference_origin": "source_runtime",
+    "comparisons": [
+      {
+        "test_id": "normal-0",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 2.384185791015625e-07,
+            "max_scaled_error": 0.07315057820007938,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-1",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 2.384185791015625e-07,
+            "max_scaled_error": 0.07290886454185222,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-2",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 4.76837158203125e-07,
+            "max_scaled_error": 0.07094915201668109,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-3",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 2.384185791015625e-07,
+            "max_scaled_error": 0.05636819494496792,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "normal-4",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 2.384185791015625e-07,
+            "max_scaled_error": 0.05533280364696529,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "zeros",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "positive",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 0.0,
+            "max_scaled_error": 0.0,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "mixed",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 4.76837158203125e-07,
+            "max_scaled_error": 0.23486467146667767,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "alternating",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 6.64322215016e-08,
+            "max_scaled_error": 0.06642890008145069,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "cancellation",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 3.5762786865234375e-07,
+            "max_scaled_error": 0.020356190172902626,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "dynamic_range",
+        "correct": true,
+        "outputs": {
+          "output": {
+            "correct": true,
+            "mismatch_count": 0,
+            "max_absolute_error": 2.384185791015625e-06,
+            "max_scaled_error": 0.035440753472687034,
+            "first_failing_indices": []
+          }
+        }
+      },
+      {
+        "test_id": "operation_boundary",
+        "correct": false,
+        "outputs": {
+          "output": {
+            "correct": false,
+            "mismatch_count": 1280,
+            "max_absolute_error": 1.5020370483398438e-05,
+            "max_scaled_error": 1.365878858816452,
+            "first_failing_indices": [
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                1,
+                4
+              ],
+              [
+                1,
+                5
+              ],
+              [
+                1,
+                6
+              ],
+              [
+                1,
+                7
+              ]
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

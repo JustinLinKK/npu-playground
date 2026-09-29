@@ -1,7 +1,6 @@
 """Public API for the NPU translation framework."""
 
 from .config import Settings
-from .baseline import translate_one_shot
 from .models import (
     BaselineResult,
     Candidate,
@@ -12,7 +11,6 @@ from .models import (
     TranslationRequest,
     TranslationResult,
 )
-from .workflow import build_workflow, translate
 
 __all__ = [
     "Candidate",
@@ -28,3 +26,14 @@ __all__ = [
     "translate",
     "translate_one_shot",
 ]
+
+
+def __getattr__(name):
+    # Offline evaluators need only NumPy/Pydantic, not orchestration providers.
+    if name == "translate_one_shot":
+        from .baseline import translate_one_shot
+        return translate_one_shot
+    if name in ("build_workflow", "translate"):
+        from . import workflow
+        return getattr(workflow, name)
+    raise AttributeError(name)

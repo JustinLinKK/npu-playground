@@ -1,0 +1,500 @@
+{
+  "runs/ir-evolution-20260911/comparison": {
+    "Frozen baseline / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 10,
+      "unresolved": 0,
+      "known_tokens": 1718987,
+      "cycles": 100,
+      "active_minutes": 101.91920611186666
+    },
+    "Frozen baseline / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 9,
+      "exhausted": 1,
+      "unresolved": 0,
+      "known_tokens": 333024,
+      "cycles": 25,
+      "active_minutes": 9.750918749899999
+    },
+    "Original structured IR / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 10,
+      "unresolved": 0,
+      "known_tokens": 2894514,
+      "cycles": 100,
+      "active_minutes": 111.05180478563334
+    },
+    "Original structured IR / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 7,
+      "exhausted": 3,
+      "unresolved": 0,
+      "known_tokens": 1096765,
+      "cycles": 49,
+      "active_minutes": 34.61034246340001
+    },
+    "Frozen hinted IR / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 10,
+      "unresolved": 0,
+      "known_tokens": 3264680,
+      "cycles": 100,
+      "active_minutes": 145.1942316778
+    },
+    "Frozen hinted IR / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 9,
+      "exhausted": 1,
+      "unresolved": 0,
+      "known_tokens": 633866,
+      "cycles": 23,
+      "active_minutes": 18.910330821950023
+    },
+    "IR revision 1 / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 9,
+      "exhausted": 1,
+      "unresolved": 0,
+      "known_tokens": 1635965,
+      "cycles": 37,
+      "active_minutes": 68.51779559188326
+    },
+    "IR revision 1 / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 9,
+      "exhausted": 1,
+      "unresolved": 0,
+      "known_tokens": 504856,
+      "cycles": 19,
+      "active_minutes": 13.604076135183277
+    },
+    "IR revision 2 / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 10,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 545813,
+      "cycles": 25,
+      "active_minutes": 33.353122673433305
+    },
+    "IR revision 2 / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 10,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 246211,
+      "cycles": 11,
+      "active_minutes": 7.1763920376833985
+    }
+  },
+  "runs/case-study-v2": {
+    "baseline / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 149169,
+      "cycles": 10,
+      "active_minutes": 12.469512284400025
+    },
+    "baseline / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 110708,
+      "cycles": 10,
+      "active_minutes": 3.8634317298833594
+    },
+    "hinted_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 104143,
+      "cycles": 10,
+      "active_minutes": 2.841759350033317
+    },
+    "hinted_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 104730,
+      "cycles": 10,
+      "active_minutes": 3.0444874917500173
+    },
+    "structured_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 121092,
+      "cycles": 10,
+      "active_minutes": 2.862740756366687
+    },
+    "structured_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 121824,
+      "cycles": 10,
+      "active_minutes": 3.098928700633284
+    },
+    "structured_ir_no_reuse / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 121782,
+      "cycles": 10,
+      "active_minutes": 3.142772895250042
+    },
+    "structured_ir_no_reuse / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 123532,
+      "cycles": 10,
+      "active_minutes": 3.5941970009833315
+    },
+    "structured_ir_no_validation / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 124016,
+      "cycles": 10,
+      "active_minutes": 3.7261771604500002
+    },
+    "structured_ir_no_validation / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 0,
+      "unresolved": 10,
+      "known_tokens": 122125,
+      "cycles": 10,
+      "active_minutes": 3.168760590483362
+    }
+  },
+  "runs/case-study-v2-recovered": {
+    "baseline / amd_xdna2_npu2": {
+      "recorded": 30,
+      "solved": 27,
+      "exhausted": 3,
+      "unresolved": 0,
+      "known_tokens": 1758550,
+      "cycles": 89,
+      "active_minutes": 140.89297482778338
+    },
+    "baseline / intel_npu_4000": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 376724,
+      "cycles": 34,
+      "active_minutes": 13.978335760116682
+    },
+    "hinted_ir / amd_xdna2_npu2": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 1665963,
+      "cycles": 56,
+      "active_minutes": 98.97076755880006
+    },
+    "hinted_ir / intel_npu_4000": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 777609,
+      "cycles": 35,
+      "active_minutes": 24.79806094683342
+    },
+    "structured_ir / amd_xdna2_npu2": {
+      "recorded": 30,
+      "solved": 27,
+      "exhausted": 3,
+      "unresolved": 0,
+      "known_tokens": 2141898,
+      "cycles": 87,
+      "active_minutes": 143.9932967108168
+    },
+    "structured_ir / intel_npu_4000": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 746094,
+      "cycles": 32,
+      "active_minutes": 24.266343730049876
+    },
+    "structured_ir_no_reuse / amd_xdna2_npu2": {
+      "recorded": 30,
+      "solved": 28,
+      "exhausted": 2,
+      "unresolved": 0,
+      "known_tokens": 3126524,
+      "cycles": 84,
+      "active_minutes": 155.38274659105005
+    },
+    "structured_ir_no_reuse / intel_npu_4000": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 778453,
+      "cycles": 32,
+      "active_minutes": 24.355912181616592
+    },
+    "structured_ir_no_validation / amd_xdna2_npu2": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 1431629,
+      "cycles": 60,
+      "active_minutes": 87.48927247081646
+    },
+    "structured_ir_no_validation / intel_npu_4000": {
+      "recorded": 30,
+      "solved": 30,
+      "exhausted": 0,
+      "unresolved": 0,
+      "known_tokens": 740257,
+      "cycles": 32,
+      "active_minutes": 23.583044935400114
+    }
+  },
+  "runs/case-study-v3-openrouter": {
+    "baseline / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 9,
+      "unresolved": 0,
+      "known_tokens": 479738,
+      "cycles": 91,
+      "active_minutes": 64.04674843128335
+    },
+    "baseline / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 8,
+      "exhausted": 2,
+      "unresolved": 0,
+      "known_tokens": 88950,
+      "cycles": 36,
+      "active_minutes": 10.935382021649943
+    },
+    "baseline_minimal / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 9,
+      "unresolved": 1,
+      "known_tokens": 551630,
+      "cycles": 93,
+      "active_minutes": 79.9703407364333
+    },
+    "baseline_minimal / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 6,
+      "exhausted": 4,
+      "unresolved": 0,
+      "known_tokens": 142829,
+      "cycles": 59,
+      "active_minutes": 16.031589626183326
+    },
+    "hinted_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 6,
+      "unresolved": 3,
+      "known_tokens": 736179,
+      "cycles": 69,
+      "active_minutes": 52.672801449833365
+    },
+    "hinted_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 5,
+      "exhausted": 3,
+      "unresolved": 2,
+      "known_tokens": 401700,
+      "cycles": 50,
+      "active_minutes": 21.481653669083425
+    },
+    "structured_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 9,
+      "unresolved": 0,
+      "known_tokens": 684049,
+      "cycles": 92,
+      "active_minutes": 92.56026811693337
+    },
+    "structured_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 6,
+      "exhausted": 4,
+      "unresolved": 0,
+      "known_tokens": 231724,
+      "cycles": 60,
+      "active_minutes": 18.749569780550033
+    }
+  },
+  "runs/case-study-v3-openrouter-interrupted-backup-20260917T031835Z": {
+    "baseline / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 9,
+      "unresolved": 0,
+      "known_tokens": 479738,
+      "cycles": 91,
+      "active_minutes": 64.04674843128335
+    },
+    "baseline / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 8,
+      "exhausted": 2,
+      "unresolved": 0,
+      "known_tokens": 88950,
+      "cycles": 36,
+      "active_minutes": 10.935382021649943
+    },
+    "baseline_minimal / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 9,
+      "unresolved": 1,
+      "known_tokens": 551630,
+      "cycles": 93,
+      "active_minutes": 79.9703407364333
+    },
+    "baseline_minimal / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 6,
+      "exhausted": 4,
+      "unresolved": 0,
+      "known_tokens": 142829,
+      "cycles": 59,
+      "active_minutes": 16.031589626183326
+    },
+    "hinted_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 6,
+      "unresolved": 3,
+      "known_tokens": 736179,
+      "cycles": 69,
+      "active_minutes": 52.672801449833365
+    },
+    "hinted_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 5,
+      "exhausted": 3,
+      "unresolved": 2,
+      "known_tokens": 401700,
+      "cycles": 50,
+      "active_minutes": 21.481653669083425
+    },
+    "structured_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 9,
+      "unresolved": 0,
+      "known_tokens": 684049,
+      "cycles": 92,
+      "active_minutes": 92.56026811693337
+    },
+    "structured_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 6,
+      "exhausted": 4,
+      "unresolved": 0,
+      "known_tokens": 231724,
+      "cycles": 60,
+      "active_minutes": 18.749569780550033
+    }
+  },
+  "runs/case-study-v3-openrouter-recovered": {
+    "baseline / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 9,
+      "unresolved": 0,
+      "known_tokens": 479738,
+      "cycles": 91,
+      "active_minutes": 64.04674843128335
+    },
+    "baseline / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 8,
+      "exhausted": 2,
+      "unresolved": 0,
+      "known_tokens": 88950,
+      "cycles": 36,
+      "active_minutes": 10.935382021649943
+    },
+    "baseline_minimal / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 0,
+      "exhausted": 10,
+      "unresolved": 0,
+      "known_tokens": 484302,
+      "cycles": 100,
+      "active_minutes": 86.56094486373325
+    },
+    "baseline_minimal / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 6,
+      "exhausted": 4,
+      "unresolved": 0,
+      "known_tokens": 142829,
+      "cycles": 59,
+      "active_minutes": 16.031589626183326
+    },
+    "hinted_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 6,
+      "unresolved": 3,
+      "known_tokens": 693395,
+      "cycles": 79,
+      "active_minutes": 84.52530429606668
+    },
+    "hinted_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 5,
+      "exhausted": 3,
+      "unresolved": 2,
+      "known_tokens": 262335,
+      "cycles": 44,
+      "active_minutes": 51.76871613734996
+    },
+    "structured_ir / amd_xdna2_npu2": {
+      "recorded": 10,
+      "solved": 1,
+      "exhausted": 9,
+      "unresolved": 0,
+      "known_tokens": 684049,
+      "cycles": 92,
+      "active_minutes": 92.56026811693337
+    },
+    "structured_ir / intel_npu_4000": {
+      "recorded": 10,
+      "solved": 6,
+      "exhausted": 4,
+      "unresolved": 0,
+      "known_tokens": 231724,
+      "cycles": 60,
+      "active_minutes": 18.749569780550033
+    }
+  }
+}

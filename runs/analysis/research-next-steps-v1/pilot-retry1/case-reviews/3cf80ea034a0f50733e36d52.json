@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T08:59:15.713071+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/3cf80ea034a0f50733e36d52/report.json",
+  "source_report_sha256": "474fc9abb97c03c74d607d1eca8bbad71ca81762638d56045f2e185b98ffec7e",
+  "metrics": {
+    "id": "3cf80ea034a0f50733e36d52",
+    "kernel": "triton_layer_norm",
+    "family": "triton_layer_norm",
+    "target": "amd_xdna2_npu2",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 106794,
+    "input_tokens": 45271,
+    "output_tokens": 61523,
+    "reasoning_tokens": 37580,
+    "cached_input_tokens": 6656,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 1130.6238032239999,
+    "llm_calls": 10,
+    "cycles": 10,
+    "backend_attempts": 9,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 1108.8609209840142
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "7a7010dd5b7f2b3cc46f519f7ba48a41cab2978a636aaaed7209d154220c947f",
+      "failure_category": "backend_api",
+      "subtype": "python_syntax",
+      "evidence": "Unterminated Python triple-quoted string.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "fe8133c3ff09cbb10805f41391b007c31595e6465df5312124e40cabdf7d2e9e",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "Unknown aie.objectfifo.create operation.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "fa4a56a4be966a7ca731ba63677aaec5d4901ca0789cf8b09b88ed50878d012d",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "24ce81651cfc6d909b4794f373a9aaf250449426b39cbad26fd6c1f7cf618ee6",
+      "failure_category": "backend_api",
+      "subtype": "artifact_interface",
+      "evidence": "Required design.mlir artifact missing, empty or unsafe.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "9c091f8596fac89be4aaa5d42b02dc09070599c4d8195fe06ba0b51db047602c",
+      "failure_category": "backend_api",
+      "subtype": "python_syntax",
+      "evidence": "Invalid Python f-string syntax in generated MLIR.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "32e584429d524a4aa2859cee53399eb6110f7e7c306b955f4996b65bd45dd298",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected operation name in quotes.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "4e4606d4ea4700e7f0d71e4d6e2e91d40f7b5810240e4016f33d8a920aeb01d6",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "d9bdd80b07e2aefb61d00d768429b0dc33d4d6c21fefb06835d9c8a5cd3bc0a4",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "ca1a21fa3c784fe24a997f3a03fa56cf67244170db46056565a4a05c7d364c0e",
+      "failure_category": "backend_api",
+      "subtype": "mlir_syntax",
+      "evidence": "MLIR expected opening parenthesis.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "d0ef6992fe4c64576f7876c445bfc33fc51a950a5e4154592ebe7f10701a2b7a",
+      "failure_category": null,
+      "subtype": "budget_boundary",
+      "evidence": "Paid code response saved; token budget prevented backend execution.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Nine backend attempts failed before numerical validation. The final paid response crossed the token budget and was not compiled. The existing source/oracle layer-normalization discrepancy does not explain these pre-execution backend failures. No numerical-correctness or comparative IR-efficiency conclusion follows."
+}

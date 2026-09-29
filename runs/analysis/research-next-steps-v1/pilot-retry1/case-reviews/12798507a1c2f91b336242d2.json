@@ -1,0 +1,76 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:18:57.572646+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/12798507a1c2f91b336242d2/report.json",
+  "source_report_sha256": "b8223a1819392e7607c8ff51650679f7b0b3711ea0c1d0ed13562d822e73b635",
+  "metrics": {
+    "id": "12798507a1c2f91b336242d2",
+    "kernel": "cuda_vector_add",
+    "family": "cuda_vector_add",
+    "target": "intel_npu_4000",
+    "arm": "hinted_ir",
+    "repetition": 1,
+    "status": "completed",
+    "offline_pass": true,
+    "success": true,
+    "known_tokens": 32092,
+    "input_tokens": 13896,
+    "output_tokens": 18196,
+    "reasoning_tokens": 15648,
+    "cached_input_tokens": 3072,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 374.13449992399546,
+    "llm_calls": 6,
+    "cycles": 5,
+    "backend_attempts": 5,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 365.4316801229943
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "a4ef97092eb865a5e8a37ec6533a73d7abb910dda5df49a1b32e50a577534bf4",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime; target compilation cannot proceed. Numerical validation not reached.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "744957385142959bf588a1646ab0926acb350531cd01780095a0a2fbe7fa1c59",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime; target compilation cannot proceed. Numerical validation not reached.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "1017d5c7001029bf111913a55e003fd293309e08c366860596400ea7519ca5ae",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime; target compilation cannot proceed. Numerical validation not reached.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "dcd7d2309de2fb7177f639e42b4147b5635c47572ad9c86fb6afb68021fe0a56",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime; target compilation cannot proceed. Numerical validation not reached.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "9591af8ec73cf9fcf26f520c57401e3bbbb347fec901497fbcbfc506ffecf68f",
+      "failure_category": null,
+      "subtype": "offline_pass",
+      "evidence": "Graph construction, target compilation and host correctness passed. Physical target execution remains blocked because no executor is configured.",
+      "numerical_validation_reached": true
+    }
+  ],
+  "interpretation": "Budget-qualified offline success after four import failures. One successful case does not establish an arm-level advantage. No physical NPU execution or hardware performance was validated."
+}

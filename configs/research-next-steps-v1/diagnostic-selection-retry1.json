@@ -1,0 +1,85 @@
+{
+  "protocol": "research-diagnostics-v1",
+  "selected_at": "2026-09-17T06:49:48.468795+00:00",
+  "pilot": "runs/case-study-v4-deepseek-pilot-retry1",
+  "selection_rule": "Retain all three pilot kernels on both targets; selected before alternative-lowering outcomes. Report every selected case, including unresolved source-contract cases. Determine successful controls and failure categories from the completed pilot without dropping cases.",
+  "kernels": [
+    "cuda_vector_add",
+    "cuda_tiled_transpose",
+    "triton_layer_norm"
+  ],
+  "targets": [
+    "amd_xdna2_npu2",
+    "intel_npu_4000"
+  ],
+  "baseline_config": "configs/case-study-v4.json",
+  "comparison_controls": [
+    "same source and manifest hashes",
+    "same reference IR for generated and alternative lowering",
+    "same target/compiler identities",
+    "same provider route, reasoning and sampling",
+    "same backend acceptance and case budgets"
+  ],
+  "references": [
+    {
+      "kernel": "cuda_vector_add",
+      "ir_path": "configs/research-next-steps-v1/cuda_vector_add.json",
+      "ir_sha256": "f3ec80173481b1b8e057eafd0f274c5a43e38d6749eb5ca18ef60fc9b0300cf5",
+      "source_sha256": "328aebd59d0e5ac490f73eca2dda155c6122a433afbb24aa494f7ce162efa591",
+      "manifest_sha256": "f4e24cd742a92407f4f45520cbf4c216fcaca609ec02b294f607b0e88b528674",
+      "reviewer": "Codex source inspection; no human review claimed",
+      "review_notes": "The source writes x[i]+y[i] for i<n; the fixed manifest binds n=4096 and disallows output aliasing.",
+      "semantic_validation": {
+        "passed": true,
+        "mismatches": {},
+        "message": "IR matches independent oracle on 12 cases; prose metadata is not executable evidence"
+      },
+      "source_runtime_validation": {
+        "status": "passed",
+        "report": "runs/analysis/research-next-steps-v1/source-cuda/cuda_vector_add/report.json",
+        "report_sha256": "735348acb50edcbdf82616a9c46faf4c412651332c8cb791f9e653296ae6bb34",
+        "cases_run": 12,
+        "scope": "Finite original CUDA source execution on RTX 5090; no universal equivalence or NPU execution claim."
+      }
+    },
+    {
+      "kernel": "cuda_tiled_transpose",
+      "ir_path": "configs/research-next-steps-v1/cuda_tiled_transpose.json",
+      "ir_sha256": "bb1c8fd951e65b9be708c8e7103dddea9a7c06c7c1d491351ccbec5ae03f11ef",
+      "source_sha256": "f8f12b38ccdf039fcf5b4ece3b3c26f320fcb968bf23d91834f672ed7242122d",
+      "manifest_sha256": "b0182daba566cd28d7492ab177177c4cb5c94a68235ea646d52a24a75cac05c0",
+      "reviewer": "Codex source inspection; no human review claimed",
+      "review_notes": "The two shared-tile index swaps implement output[j,i]=input[i,j] for the fixed 64x96 matrix; complete 32x32 blocks cover both dimensions.",
+      "semantic_validation": {
+        "passed": true,
+        "mismatches": {},
+        "message": "IR matches independent oracle on 12 cases; prose metadata is not executable evidence"
+      },
+      "source_runtime_validation": {
+        "status": "passed",
+        "report": "runs/analysis/research-next-steps-v1/source-cuda/cuda_tiled_transpose/report.json",
+        "report_sha256": "285af8d7ff4462a5abb648b0ce47eb59aff9d07b33a814ea9d96806ccd497276",
+        "cases_run": 12,
+        "scope": "Finite original CUDA source execution on RTX 5090; no universal equivalence or NPU execution claim."
+      }
+    }
+  ],
+  "unresolved_references": [
+    {
+      "kernel": "triton_layer_norm",
+      "reason": "Original GPU source fails operation_boundary under the frozen independent oracle tolerance; do not label oracle-valid IR source-equivalent.",
+      "evidence": "runs/analysis/research-next-steps-v1/source-layer-norm/report.json"
+    }
+  ],
+  "execution_gate": "Complete and audit pilot first. Review source-contract discrepancy and preparation provenance before declaring an audited-IR diagnostic. No alternative lowering has run.",
+  "cost_policy": "Disclose all reference preparation and validation, preserve failed preflight with unknown usage, and charge each generated or mechanical backend attempt; preparation is not free deployable performance.",
+  "preparation_accounting": {
+    "agent_preparation_seconds": null,
+    "agent_preparation_tokens": null,
+    "note": "Initial agent inspection and reference preparation were not separately timed or token-metered. Disclose this unknown effort; these controls cannot establish deployable end-to-end efficiency."
+  },
+  "selection_provenance": {
+    "original_selection": "configs/research-next-steps-v1/diagnostic-selection.json",
+    "change": "Bind the unchanged six-case selection and reference identities to the fresh pilot after the original infrastructure interruption. No cases added or excluded."
+  }
+}

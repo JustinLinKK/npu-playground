@@ -1,0 +1,60 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:31:42.336671+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/e833a44e860e85526ff2112d/report.json",
+  "source_report_sha256": "650729defad4af0136a6894a5a7bc9c2908b592ec8a011cd3d54705eb2e642aa",
+  "metrics": {
+    "id": "e833a44e860e85526ff2112d",
+    "kernel": "cuda_vector_add",
+    "family": "cuda_vector_add",
+    "target": "intel_npu_4000",
+    "arm": "direct",
+    "repetition": 1,
+    "status": "completed",
+    "offline_pass": true,
+    "success": true,
+    "known_tokens": 9048,
+    "input_tokens": 4562,
+    "output_tokens": 4486,
+    "reasoning_tokens": 3874,
+    "cached_input_tokens": 640,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 115.51646675800293,
+    "llm_calls": 3,
+    "cycles": 3,
+    "backend_attempts": 3,
+    "semantic_failures": 0,
+    "identical_backend_pairs": 0,
+    "length_finishes": 0,
+    "model_seconds": 109.4077850629983
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "c10f90d2d6b000a3774f38abfb7aa1ac9c3d99ce2277a99cf1c88069d680ade0",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime; numerical validation not reached.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "0bfe4394337778dcb822add519e8a0d341d207e60f2bd7e7197929c5e1c18675",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Graph construction imports unavailable openvino.runtime; numerical validation not reached.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "d30d17078ad63af0592e050d52dbd06055e74090fe8d49c1a41582e4ba98a036",
+      "failure_category": null,
+      "subtype": "offline_pass",
+      "evidence": "Graph construction, target compilation and host correctness passed; physical NPU execution was not validated.",
+      "numerical_validation_reached": true
+    }
+  ],
+  "interpretation": "Budget-qualified offline success in the serial portion of the campaign after two import failures. No physical NPU execution or performance evidence."
+}

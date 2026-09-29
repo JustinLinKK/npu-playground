@@ -6,6 +6,9 @@ from typing import Any
 import numpy as np
 
 from .models import ArgumentDirection, KernelIR, KernelManifest
+from .oracles import execute_oracle, validate_goldens
+from .testcases import generate_cases
+from .validation import check_contract, compare_outputs
 
 
 @dataclass(frozen=True)
@@ -16,6 +19,7 @@ class IRValidationResult:
 
 
 def generate_inputs(manifest: KernelManifest) -> dict[str, np.ndarray | int | float | bool]:
+    check_contract(manifest)
     rng = np.random.default_rng(manifest.seed)
     values: dict[str, np.ndarray | int | float | bool] = {}
     for tensor in manifest.tensors:
@@ -44,6 +48,10 @@ def _conv2d(value: np.ndarray, weight: np.ndarray, padding: int) -> np.ndarray:
     if channels != weight_channels:
         raise ValueError("conv2d channel mismatch")
     padded = np.pad(value, ((0, 0), (0, 0), (padding, padding), (padding, padding)))
+    height = height + 2 * padding - kernel_h + 1
+    width = width + 2 * padding - kernel_w + 1
+    if min(height, width) <= 0:
+        raise ValueError("invalid conv2d output dimensions")
     output = np.zeros((n, out_channels, height, width), dtype=np.float32)
     for batch in range(n):
         for out_channel in range(out_channels):
@@ -65,14 +73,48 @@ def _moving_average(value: np.ndarray, window: int) -> np.ndarray:
 
 
 def evaluate_operation(operation: str, inputs: list[Any], attributes: dict[str, Any]) -> np.ndarray:
+    if operation == "constant":
+        return np.asarray(attributes["value"], dtype=attributes["output_dtype"])
+    if operation == "center":
+        dtype = attributes.get("accumulation_dtype", "float32")
+        if dtype not in ("float32", "float64") or attributes.get("axes") is not None:
+            raise ValueError("center requires one axis and float32 or float64 accumulation_dtype")
+        value = np.asarray(inputs[0], dtype=dtype)
+        axis = int(attributes.get("axis", -1))
+        shifted = value - np.take(value, [0], axis=axis)
+        return shifted - shifted.mean(axis=axis, keepdims=True, dtype=dtype)
+    binary = {"subtract": np.subtract, "multiply": np.multiply, "divide": np.divide,
+              "maximum": np.maximum, "minimum": np.minimum}
+    if operation in binary:
+        return binary[operation](*inputs)
+    if operation in ("exp", "sqrt"):
+        return {"exp": np.exp, "sqrt": np.sqrt}[operation](inputs[0])
+    if operation == "compare":
+        return {"lt": np.less, "le": np.less_equal, "eq": np.equal, "ge": np.greater_equal,
+                "gt": np.greater, "ne": np.not_equal}[attributes["comparison"]](*inputs)
+    if operation == "select":
+        return np.where(*inputs)
+    if operation == "reshape":
+        return np.reshape(inputs[0], attributes["shape"])
+    if operation == "cast":
+        return np.asarray(inputs[0]).astype(attributes["output_dtype"])
+    if operation in ("reduce_max", "reduce_min", "reduce_product"):
+        axis = tuple(attributes["axes"]) if attributes.get("axes") is not None else attributes.get("axis")
+        kwargs = {"axis": axis, "keepdims": attributes.get("keepdims", False)}
+        if "initial_value" in attributes:
+            kwargs["initial"] = attributes["initial_value"]
+        if operation == "reduce_product":
+            kwargs["dtype"] = attributes["accumulation_dtype"]
+        return {"reduce_max": np.max, "reduce_min": np.min, "reduce_product": np.prod}[operation](inputs[0], **kwargs)
     if operation == "add":
         return np.asarray(inputs[0]) + np.asarray(inputs[1])
     if operation == "reduce_sum":
-        axis = attributes.get("axis")
+        axis = tuple(attributes["axes"]) if attributes.get("axes") is not None else attributes.get("axis")
         return np.asarray(inputs[0]).sum(
             axis=axis,
-            dtype=np.float32,
+            dtype=attributes.get("accumulation_dtype", "float32"),
             keepdims=bool(attributes.get("keepdims", False)),
+            initial=attributes.get("initial_value", 0),
         )
     if operation == "matmul":
         return np.matmul(np.asarray(inputs[0]).astype(np.float32), np.asarray(inputs[1]).astype(np.float32)).astype(
@@ -107,25 +149,31 @@ def evaluate_operation(operation: str, inputs: list[Any], attributes: dict[str, 
 
 
 def execute_ir(kernel_ir: KernelIR, inputs: dict[str, Any]) -> dict[str, np.ndarray]:
+    if kernel_ir.side_effects:
+        raise ValueError("unsupported IR side_effects")
     values = dict(inputs)
     for operation in kernel_ir.operations:
+        legacy_ops = {"add", "reduce_sum", "matmul", "transpose", "softmax", "layer_norm", "attention", "moving_average", "conv2d", "gamma_correction"}
+        if kernel_ir.schema_version == "1.0" and operation.op not in legacy_ops:
+            raise ValueError("primitive operations require KernelIR schema_version 2.0")
+        if operation.index_expression:
+            raise ValueError("unsupported executable index_expression; use structured operations")
+        if operation.reduction:
+            reduction = operation.reduction
+            axes = operation.attributes.axes
+            if axes is None and operation.attributes.axis is not None:
+                axes = [operation.attributes.axis]
+            expected_op = {"sum": "reduce_sum", "max": "reduce_max", "min": "reduce_min", "product": "reduce_product"}[reduction.operator]
+            if (reduction.ordered or operation.op != expected_op or axes != reduction.axes
+                    or reduction.accumulation_dtype != (operation.attributes.accumulation_dtype or "float32")):
+                raise ValueError("unsupported reduction metadata")
         args = [values[name] for name in operation.inputs]
         attributes = operation.attributes.model_dump(exclude_none=True)
+        if operation.reduction:
+            attributes["initial_value"] = operation.reduction.initial_value
         values[operation.output] = evaluate_operation(operation.op, args, attributes)
-    return {output.name: np.asarray(values[output.name], dtype=output.dtype) for output in kernel_ir.outputs}
+    return {output.name: np.asarray(values[output.name]) for output in kernel_ir.outputs}
 
-
-def execute_oracle(manifest: KernelManifest, inputs: dict[str, Any]) -> dict[str, np.ndarray]:
-    operation = manifest.oracle.operation
-    op_name = {"vector_add": "add"}.get(operation, operation)
-    input_names = [arg.name for arg in manifest.tensors if arg.direction != ArgumentDirection.OUTPUT]
-    scalar_names = [arg.name for arg in manifest.scalars]
-    arguments = [inputs[name] for name in input_names + scalar_names]
-    output = evaluate_operation(op_name, arguments, manifest.oracle.parameters)
-    outputs = [arg for arg in manifest.tensors if arg.direction in (ArgumentDirection.OUTPUT, ArgumentDirection.INOUT)]
-    if len(outputs) != 1:
-        raise ValueError("builtin oracles currently require exactly one output")
-    return {outputs[0].name: np.asarray(output, dtype=outputs[0].dtype)}
 
 
 def validate_ir(kernel_ir: KernelIR, manifest: KernelManifest) -> IRValidationResult:
@@ -145,25 +193,15 @@ def validate_ir(kernel_ir: KernelIR, manifest: KernelManifest) -> IRValidationRe
     ir_scalars = {item.name: (item.dtype, item.value) for item in kernel_ir.scalars}
     if (manifest_inputs, manifest_outputs, manifest_scalars) != (ir_inputs, ir_outputs, ir_scalars):
         return IRValidationResult(False, {}, "IR signature does not match the manifest")
-    inputs = generate_inputs(manifest)
-    expected = execute_oracle(manifest, inputs)
-    actual = execute_ir(kernel_ir, inputs)
     mismatches: dict[str, float] = {}
-    for name, expected_value in expected.items():
-        if name not in actual:
-            mismatches[name] = float("inf")
-            continue
-        actual_value = actual[name]
-        if actual_value.shape != expected_value.shape:
-            mismatches[name] = float("inf")
-            continue
-        if not np.allclose(
-            actual_value,
-            expected_value,
-            rtol=manifest.tolerance.rtol,
-            atol=manifest.tolerance.atol,
-            equal_nan=manifest.tolerance.equal_nan,
-        ):
-            mismatches[name] = float(np.max(np.abs(actual_value.astype(np.float64) - expected_value.astype(np.float64))))
-    passed = not mismatches
-    return IRValidationResult(passed, mismatches, "IR matches oracle" if passed else f"IR mismatch: {mismatches}")
+    try:
+        validate_goldens(manifest.oracle.operation)
+        for case in generate_cases(manifest):
+            expected = execute_oracle(manifest, case.inputs)
+            actual = execute_ir(kernel_ir, case.inputs)
+            comparison = compare_outputs(actual, expected, manifest.tolerance, case.id)
+            if not comparison["correct"]:
+                return IRValidationResult(False, {case.id: 1.0}, f"IR mismatch: {comparison}")
+    except (ValueError, TypeError, KeyError, IndexError) as exc:
+        return IRValidationResult(False, {}, str(exc))
+    return IRValidationResult(True, mismatches, "IR matches independent oracle on 12 cases; prose metadata is not executable evidence")

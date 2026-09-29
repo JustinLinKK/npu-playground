@@ -1,0 +1,742 @@
+scope,case_id,kernel,target,arm,cycle,stage,status,failure_category,message,known_tokens,usage_complete,seconds,generation_id,billed_cost
+preflight,,,,,0,model_CodeBundle,completed,,,913,True,15.607687869000074,gen-1789626840-DhByb3vtfnBru2Bp2jHa,0.0009310665
+preflight,,,,,0,model_Hint,completed,,,641,True,11.349781730001268,gen-1789626856-qn8oMgB4EJUCVbkvCKdB,0.0006287385
+preflight,,,,,0,model_ExecutableKernelIR,completed,,,1209,True,22.673748121000244,gen-1789626867-WzUt6yb1EZzUdvw8AvqB,0.0012600705
+preflight,,,amd_xdna2_npu2,,0,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+preflight,,,amd_xdna2_npu2,,0,performance,not_requested,,,0,True,0.0,,
+preflight,,,amd_xdna2_npu2,,0,oracle_validation,passed,,,0,True,0.0004279829990991857,,
+preflight,,,amd_xdna2_npu2,,0,design_emission,passed,,,0,True,0.9165576939994935,,
+preflight,,,amd_xdna2_npu2,,0,target_compile,passed,,"aiecc: (1/37) input.mlir (0 inputs) took 0 ms
+aiecc: (2/37) placed.mlir (1 inputs) took 9 ms
+aiecc: (3/37) traced.mlir (1 inputs) took 0 ms
+aiecc: (4/37) input_with_addresses.mlir (1 inputs) took 22 ms
+aiecc: (5/37) input_physical.mlir (1 inputs) took 1 ms
+aiecc: (6/37) perCore_{0}.mlir (1 inputs) took 0 ms
+aiecc: (7/37) npu_materialized.mlir (1 inputs) took 0 ms
+aiecc: (8/37) perCoreInDevice (1 inputs) took 0 ms
+aiecc: (9/37) npu_dma_lowered.mlir (1 inputs) took 4 ms
+aiecc: (10/37) perCoreCompile (1 inputs) took 0 ms
+aiecc: (11/37) preBakedCores (1 inputs) took 0 ms
+aiecc: (13/37) npu_lowered.mlir (1 inputs) took 0 ms
+aiecc: (14/37) perCoreArches_{0}.txt (1 inputs) took 0 ms
+aiecc: (15/37) lowered_{0}.mlir (1 inputs) took 9 ms
+aiecc: (16/37) perCoreIRLinkFiles_{0}.txt (1 inputs) took 0 ms
+aiecc: (17/37) ldScripts_{0}.ld.script (1 inputs) took 0 ms
+aiecc: (18/37) npu_seq_{0}.mlir (1 inputs) took 0 ms
+aiecc: (19/37) llvmIR_{0}.ll (1 inputs) took 7 ms
+aiecc: (20/37) perSeqMatching (1 inputs) took 0 ms
+aiecc: (21/37) peano-compat_{0}.ll (1 inputs) took 0 ms
+aiecc: (22/37) peano-linked_{0}.ll (2 inputs) took 0 ms
+aiecc: (23/37) opted_{0}.ll (1 inputs) took 17 ms
+aiecc: (24/37) objects_{0}.o (2 inputs) took 12 ms
+aiecc: (25/37) npu_program_{0}.bin (1 inputs) took 51 ms
+aiecc: (26/37) insts.bin (1 inputs) took 0 ms
+aiecc: (27/37) elfs_{0}.elf (3 inputs) took 36 ms
+aiecc: (28/37) physical_with_elfs.mlir (2 inputs) took 0 ms
+aiecc: (29/37) perDevice_{0}.mlir (1 inputs) took 0 ms
+aiecc: (30/37) perDeviceMatching (1 inputs) took 0 ms
+aiecc: (31/37) cdo_{0} (1 inputs) took 0 ms
+aiecc: (32/37) memTopology_{0}.json (1 inputs) took 0 ms
+aiecc: (33/37) kernels_{0}.json (1 inputs) took 0 ms
+aiecc: (34/37) bif_{0}.bif (2 inputs) took 0 ms
+aiecc: (35/37) {0}.pdi (1 inputs) took 2 ms
+aiecc: (36/37) partition_{0}.json (2 inputs) took 0 ms
+aiecc: (37/37) final.xclbin (3 inputs) took 5 ms
+aiecc: wrote edge 'placed.mlir'
+aiecc: wrote edge 'traced.mlir'
+aiecc: wrote edge 'input_with_addresses.mlir'
+aiecc: wrote edge 'input_physical.mlir'
+aiecc: wrote edge 'perCore_{0}.mlir'
+aiecc: wrote edge 'perCoreArches_{0}.txt'
+aiecc: wrote edge 'lowered_{0}.mlir'
+aiecc: wrote edge 'perCoreIRLinkFiles_{0}.txt'
+aiecc: wrote edge 'llvmIR_{0}.ll'
+aiecc: wrote edge 'peano-compat_{0}.ll'
+aiecc: wrote edge 'peano-linked_{0}.ll'
+aiecc: wrote edge 'opted_{0}.ll'
+aiecc: wrote edge 'objects_{0}.o'
+aiecc: wrote edge 'ldScripts_{0}.ld.script'
+aiecc: wrote edge 'elfs_{0}.elf'
+aiecc: wrote edge 'physical_with_elfs.mlir'
+aiecc: wrote edge 'npu_materialized.mlir'
+aiecc: wrote edge 'npu_dma_lowered.mlir'
+aiecc: wrote edge 'npu_lowered.mlir'
+aiecc: wrote edge 'perDevice_{0}.mlir'
+aiecc: wrote edge 'cdo_{0}'
+aiecc: wrote edge 'bif_{0}.bif'
+aiecc: wrote edge '{0}.pdi'
+aiecc: wrote edge 'memTopology_{0}.json'
+aiecc: wrote edge 'kernels_{0}.json'
+aiecc: wrote edge 'partition_{0}.json'
+aiecc: wrote edge 'final.xclbin'
+aiecc: wrote edge 'npu_seq_{0}.mlir'
+aiecc: wrote edge 'insts.bin'
+",0,True,3.9243645219976315,,
+preflight,,,amd_xdna2_npu2,,0,dataflow_frontend,passed,,,0,True,1.0676256190017739,,
+preflight,,,amd_xdna2_npu2,,0,host_execution,passed,,,0,True,1.5209951209981227,,
+preflight,,,amd_xdna2_npu2,,0,dataflow_simulation,passed,,,0,True,1.3224808200029656,,
+preflight,,,intel_npu_4000,,0,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+preflight,,,intel_npu_4000,,0,performance,not_requested,,,0,True,0.0,,
+preflight,,,intel_npu_4000,,0,oracle_validation,passed,,,0,True,0.0008969169975898694,,
+preflight,,,intel_npu_4000,,0,graph_construction,passed,,,0,True,1.5679289360014081,,
+preflight,,,intel_npu_4000,,0,host_execution,passed,,,0,True,1.3695916799988481,,
+preflight,,,intel_npu_4000,,0,target_compile,passed,,,0,True,1.3172902690021147,,
+preflight,,,intel_npu_4000,,0,dataflow_simulation,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,model_intermediate,completed,,,3687,True,59.05104334100179,gen-1789626997-xxfz6yQrmdoPZdYwJsST,0.0036045945
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,model_code,completed,,,9741,True,155.51149132400315,gen-1789627056-UVSX2cSX1YJBQVKS1Nw1,0.0096630105
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,oracle_validation,passed,,,0,True,0.0253847849999147,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,design_emission,passed,,,0,True,1.0666790869981924,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":21:23: Dialect `' not found for custom op 'cmpi'  (tried '.cmpi' as well)
+ note: ""-"":21:23: Available dialects: acc, affine, aie, aievec, aiex, amdgpu, arith, arm_neon, arm_sme, arm_sve, async, bufferization, builtin, cf, complex, dlti, emitc, func, gpu, index, irdl, linalg, llvm, math, memref, ml_program, mpi, nvgpu, nvvm, omp, pdl, pdl_interp, ptr, quant, rocdl, scf, shape, shard, smt, sparse_tensor, spirv, tensor, tosa, transform, ub, vcix, vector, wasmssa, x86, xegpu, xevm ; for more info on dialect registration see https://mlir.llvm.org/getting_started/Faq/#registered-loaded-dependent-whats-up-with-dialects-management
+",0,True,1.3174850069990498,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":21:23: Dialect `' not found for custom op 'cmpi'  (tried '.cmpi' as well)
+ note: ""-"":21:23: Available dialects: acc, affine, aie, aievec, aiex, amdgpu, arith, arm_neon, arm_sme, arm_sve, async, bufferization, builtin, cf, complex, dlti, emitc, func, gpu, index, irdl, linalg, llvm, math, memref, ml_program, mpi, nvgpu, nvvm, omp, pdl, pdl_interp, ptr, quant, rocdl, scf, shape, shard, smt, sparse_tensor, spirv, tensor, tosa, transform, ub, vcix, vector, wasmssa, x86, xegpu, xevm ; for more info on dialect registration see https://mlir.llvm.org/getting_started/Faq/#registered-loaded-dependent-whats-up-with-dialects-management
+",0,True,1.116774799000268,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":21:23: Dialect `' not found for custom op 'cmpi'  (tried '.cmpi' as well)
+ note: ""-"":21:23: Available dialects: acc, affine, aie, aievec, aiex, amdgpu, arith, arm_neon, arm_sme, arm_sve, async, bufferization, builtin, cf, complex, dlti, emitc, func, gpu, index, irdl, linalg, llvm, math, memref, ml_program, mpi, nvgpu, nvvm, omp, pdl, pdl_interp, ptr, quant, rocdl, scf, shape, shard, smt, sparse_tensor, spirv, tensor, tosa, transform, ub, vcix, vector, wasmssa, x86, xegpu, xevm ; for more info on dialect registration see https://mlir.llvm.org/getting_started/Faq/#registered-loaded-dependent-whats-up-with-dialects-management
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,1,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":21:23: Dialect `' not found for custom op 'cmpi'  (tried '.cmpi' as well)
+ note: ""-"":21:23: Available dialects: acc, affine, aie, aievec, aiex, amdgpu, arith, arm_neon, arm_sme, arm_sve, async, bufferization, builtin, cf, complex, dlti, emitc, func, gpu, index, irdl, linalg, llvm, math, memref, ml_program, mpi, nvgpu, nvvm, omp, pdl, pdl_interp, ptr, quant, rocdl, scf, shape, shard, smt, sparse_tensor, spirv, tensor, tosa, transform, ub, vcix, vector, wasmssa, x86, xegpu, xevm ; for more info on dialect registration see https://mlir.llvm.org/getting_started/Faq/#registered-loaded-dependent-whats-up-with-dialects-management
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,model_code,completed,,,10379,True,83.41105684500144,gen-1789627215-mrVWJH6FdVV3TrZ6fXYj,0.0074118525
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,oracle_validation,passed,,,0,True,0.01807219699912821,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,design_emission,passed,,,0,True,1.0656805299986445,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":18:31: unexpected character
+",0,True,1.0692334590021346,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":18:31: unexpected character
+",0,True,1.066359779000777,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":18:31: unexpected character
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,2,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":18:31: unexpected character
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,model_code,completed,,,11560,True,110.01253372500287,gen-1789627302-41h1uVXBSueGX5Hj8oa4,0.0083395104
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,oracle_validation,passed,,,0,True,0.018976990002556704,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,design_emission,passed,,,0,True,0.9163133390029543,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":31:9: custom op 'aie.barrier' is unknown
+",0,True,1.1760565209988272,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":31:9: custom op 'aie.barrier' is unknown
+",0,True,1.0666134390048683,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":31:9: custom op 'aie.barrier' is unknown
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,3,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":31:9: custom op 'aie.barrier' is unknown
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,model_code,completed,,,10644,True,95.86230264299957,gen-1789627415-9e58RlUBxGhvStvRDNHF,0.0074214114
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,oracle_validation,passed,,,0,True,0.0194157760051894,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,design_emission,passed,,,0,True,0.9662314969973522,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 31, in main
+    raise ValueError('exactly one target device required')
+ValueError: exactly one target device required
+",0,True,1.1167541309987428,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,dataflow_frontend,unsupported,needs_review,"unsupported MLIR operation: memref.alloc
+",0,True,1.116921048000222,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,host_execution,unsupported,,"unsupported MLIR operation: memref.alloc
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,4,dataflow_simulation,unsupported,,"unsupported MLIR operation: memref.alloc
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,model_code,completed,,,8479,True,79.2277803620018,gen-1789627514-eCrBu95yKBwDJWNUL5FD,0.0064567035
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,oracle_validation,passed,,,0,True,0.018744118002359755,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,design_emission,passed,,,0,True,0.9667163289996097,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 31, in main
+    raise ValueError('exactly one target device required')
+ValueError: exactly one target device required
+",0,True,1.1672336269984953,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,dataflow_frontend,unsupported,needs_review,"unsupported MLIR operation: memref.alloc
+",0,True,1.1169035450002411,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,host_execution,unsupported,,"unsupported MLIR operation: memref.alloc
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,5,dataflow_simulation,unsupported,,"unsupported MLIR operation: memref.alloc
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,model_code,completed,,,10378,True,116.10251461699954,gen-1789627597-rWbJzhKV2IobWDJPrYQM,0.0080734914
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,oracle_validation,passed,,,0,True,0.01953877400228521,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,design_emission,passed,,,0,True,0.966470589999517,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":13:33: expected '('
+",0,True,1.0167854299943428,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":13:33: expected '('
+",0,True,0.966450125000847,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":13:33: expected '('
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,6,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":13:33: expected '('
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,model_code,completed,,,13490,True,142.68916487399838,gen-1789627716-7FoPopeFtZ0Ws5eJSxr8,0.0105878526
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,oracle_validation,passed,,,0,True,0.01936592900165124,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,design_emission,passed,,,0,True,0.966655443997297,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":11:33: expected '('
+",0,True,1.1167663369997172,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":11:33: expected '('
+",0,True,1.0667169869993813,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":11:33: expected '('
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,7,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":11:33: expected '('
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,model_code,completed,,,11167,True,107.41000358999736,gen-1789627862-SMzasN9aSXifomNHESq5,0.0080064309
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,performance,not_requested,,,0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,oracle_validation,passed,,,0,True,0.017720948002533987,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,design_emission,passed,,,0,True,0.8661825239978498,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":62:41: use of value '%tile_x_i32' expects different type than prior uses: 'index' vs 'i32'
+ note: ""-"":50:13: prior use here
+",0,True,1.0669550379971042,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":62:41: use of value '%tile_x_i32' expects different type than prior uses: 'index' vs 'i32'
+ note: ""-"":50:13: prior use here
+",0,True,1.0717264330014586,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":62:41: use of value '%tile_x_i32' expects different type than prior uses: 'index' vs 'i32'
+ note: ""-"":50:13: prior use here
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,8,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":62:41: use of value '%tile_x_i32' expects different type than prior uses: 'index' vs 'i32'
+ note: ""-"":50:13: prior use here
+",0,True,0.0,,
+translation,90ad131dfb260c253c26eed0,cuda_tiled_transpose,amd_xdna2_npu2,hinted_ir,9,model_code,completed,,,12690,True,132.0843764129968,gen-1789628163-46zF2vuBoxr6WmCAv5WS,0.0093420834
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,model_code,completed,,,7347,True,135.1634122270043,gen-1789628295-HyoHQvKBaR1FpEd0XEVb,0.0075733905
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,oracle_validation,passed,,,0,True,0.017926703003467992,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,design_emission,failed,needs_review,"usage: design.py [-h] [--dev DEV] [--emit-mlir] --xclbin-path XCLBIN_PATH
+                 --insts-path INSTS_PATH
+design.py: error: the following arguments are required: --xclbin-path, --insts-path
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 2.
+",0,True,1.01572432499961,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,target_compile,failed,needs_review,"usage: design.py [-h] [--dev DEV] [--emit-mlir] --xclbin-path XCLBIN_PATH
+                 --insts-path INSTS_PATH
+design.py: error: the following arguments are required: --xclbin-path, --insts-path
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 2.
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,host_execution,blocked,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,1,dataflow_simulation,blocked,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,model_code,completed,,,8457,True,86.62963446800131,gen-1789628468-JsiV7peSrS91c0LjRUwg,0.0063944595
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,oracle_validation,passed,,,0,True,0.02039070799946785,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,design_emission,failed,needs_review,"usage: design.py [-h] [--dev DEV] [--emit-mlir] --xclbin-path XCLBIN_PATH
+                 --insts-path INSTS_PATH
+design.py: error: the following arguments are required: --xclbin-path, --insts-path
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 2.
+",0,True,0.9164409379955032,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,target_compile,failed,needs_review,"usage: design.py [-h] [--dev DEV] [--emit-mlir] --xclbin-path XCLBIN_PATH
+                 --insts-path INSTS_PATH
+design.py: error: the following arguments are required: --xclbin-path, --insts-path
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 2.
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,host_execution,blocked,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,2,dataflow_simulation,blocked,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,model_code,completed,,,11329,True,136.61538882499735,gen-1789628556-Hj1UoFMJOBagLsuftRuJ,0.0096733845
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,oracle_validation,passed,,,0,True,0.019806898999377154,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,design_emission,passed,,,0,True,0.8160490160007612,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,1.3674508090043673,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,1.0166923029973987,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,3,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,model_code,completed,,,8023,True,59.96901689099468,gen-1789628696-Cv6zij4Jzjn3mhjDWXpV,0.0055497195
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,oracle_validation,passed,,,0,True,0.018292844004463404,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,design_emission,passed,,,0,True,1.0164941719995113,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,1.0166330639985972,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,0.9666484609988402,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,4,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":9:35: expected ','
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,model_code,completed,,,13175,True,157.9354776129985,gen-1789628759-twS6ahjmnw0kcJCBXrKD,0.0110068881
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,oracle_validation,passed,,,0,True,0.019687949999934062,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,design_emission,failed,backend_api,"Traceback (most recent call last):
+  File ""/work/candidate/design.py"", line 10, in <module>
+    from mlir.ir import *
+ModuleNotFoundError: No module named 'mlir'
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 1.
+",0,True,0.8155819100065855,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,target_compile,failed,backend_api,"Traceback (most recent call last):
+  File ""/work/candidate/design.py"", line 10, in <module>
+    from mlir.ir import *
+ModuleNotFoundError: No module named 'mlir'
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 1.
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,host_execution,blocked,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,5,dataflow_simulation,blocked,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,model_code,completed,,,11668,True,135.39413650300412,gen-1789628918-2PCEhcMbRZa2aUukWYwO,0.0097691958
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,oracle_validation,passed,,,0,True,0.01962015400204109,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,design_emission,passed,,,0,True,0.815993279000395,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":26:20: 'memref.load' op invalid number of indices for accessed memref, expected 2 but got 1
+ note: ""-"":26:20: see current operation: %25 = ""memref.load""(%arg0, %24) : (memref<64x96xf32>, index) -> f32
+",0,True,1.0166976079999586,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":26:20: 'memref.load' op invalid number of indices for accessed memref, expected 2 but got 1
+ note: ""-"":26:20: see current operation: %25 = ""memref.load""(%arg0, %24) : (memref<64x96xf32>, index) -> f32
+",0,True,1.066792442004953,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":26:20: 'memref.load' op invalid number of indices for accessed memref, expected 2 but got 1
+ note: ""-"":26:20: see current operation: %25 = ""memref.load""(%arg0, %24) : (memref<64x96xf32>, index) -> f32
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,6,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":26:20: 'memref.load' op invalid number of indices for accessed memref, expected 2 but got 1
+ note: ""-"":26:20: see current operation: %25 = ""memref.load""(%arg0, %24) : (memref<64x96xf32>, index) -> f32
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,model_code,completed,,,11683,True,100.36256292199687,gen-1789629056-n0J9U4vdo35MeeWhETe2,0.0083607771
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,oracle_validation,passed,,,0,True,0.019858229003148153,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,design_emission,passed,,,0,True,0.9158535470050992,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 31, in main
+    raise ValueError('exactly one target device required')
+ValueError: exactly one target device required
+",0,True,1.0159898649944807,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,dataflow_frontend,unsupported,needs_review,"unsupported MLIR operation: memref.alloca
+",0,True,0.9657075680006528,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,host_execution,unsupported,,"unsupported MLIR operation: memref.alloca
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,7,dataflow_simulation,unsupported,,"unsupported MLIR operation: memref.alloca
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,model_code,completed,,,11004,True,116.66359524400468,gen-1789629159-IAJvlLA89vX696M9kkUq,0.0088259028
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,oracle_validation,passed,,,0,True,0.019724374993529636,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,design_emission,passed,,,0,True,0.8162835039984202,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 31, in main
+    raise ValueError('exactly one target device required')
+ValueError: exactly one target device required
+",0,True,1.066096791997552,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,dataflow_frontend,unsupported,needs_review,"unsupported MLIR operation: memref.alloca
+",0,True,0.9662067480021506,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,host_execution,unsupported,,"unsupported MLIR operation: memref.alloca
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,8,dataflow_simulation,unsupported,,"unsupported MLIR operation: memref.alloca
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,model_code,completed,,,10906,True,119.98983241999667,gen-1789629279-PrOTOkVqFaYr3rWgrjIV,0.0086782956
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,performance,not_requested,,,0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,oracle_validation,passed,,,0,True,0.01964953500282718,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,design_emission,passed,,,0,True,0.8158662559944787,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 31, in main
+    raise ValueError('exactly one target device required')
+ValueError: exactly one target device required
+",0,True,0.9661171339976136,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,dataflow_frontend,unsupported,needs_review,"unsupported MLIR operation: memref.alloca
+",0,True,0.9662192190007772,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,host_execution,unsupported,,"unsupported MLIR operation: memref.alloca
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,9,dataflow_simulation,unsupported,,"unsupported MLIR operation: memref.alloca
+",0,True,0.0,,
+translation,4b3e14c89a0b4c3514118c37,cuda_tiled_transpose,amd_xdna2_npu2,direct,10,model_code,completed,,,10720,True,119.3912649979975,gen-1789629402-uIjacc3MBwk5PxmyhrhH,0.0084597006
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,model_intermediate,completed,,,2975,True,37.887333366998064,gen-1789629521-TEZSHvEEZbX9YEVsKNm9,0.0025479285
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,model_code,completed,,,9352,True,144.53868311599945,gen-1789629559-S0bgDqxOT3EaB9O0A6Iq,0.009096516
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,semantic_validation,passed,,IR matches independent oracle on 12 cases; prose metadata is not executable evidence,0,True,0.021331136995286215,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,performance,not_requested,,,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,oracle_validation,passed,,,0,True,0.020067507000931073,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,design_emission,failed,backend_api,"Traceback (most recent call last):
+  File ""/work/candidate/design.py"", line 18, in <module>
+    from aie.extras.context import mlir_mod_ctx, mlir_ctx as ctx
+ImportError: cannot import name 'mlir_ctx' from 'aie.extras.context' (/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python/aie/extras/context.py). Did you mean: 'mlir_mod'?
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 1.
+",0,True,0.9661843949943432,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,target_compile,failed,backend_api,"Traceback (most recent call last):
+  File ""/work/candidate/design.py"", line 18, in <module>
+    from aie.extras.context import mlir_mod_ctx, mlir_ctx as ctx
+ImportError: cannot import name 'mlir_ctx' from 'aie.extras.context' (/opt/ironenv/lib/python3.12/site-packages/mlir_aie/python/aie/extras/context.py). Did you mean: 'mlir_mod'?
+Traceback (most recent call last):
+  File ""/tools/amd_emit.py"", line 8, in <module>
+    subprocess.run(['python', 'design.py', '--dev', 'npu2', '--emit-mlir'], cwd=work, stdout=output, check=True)
+  File ""/usr/lib/python3.12/subprocess.py"", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python', 'design.py', '--dev', 'npu2', '--emit-mlir']' returned non-zero exit status 1.
+",0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,host_execution,blocked,,,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,1,dataflow_simulation,blocked,,,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,model_code,completed,,,12834,True,115.22526576399832,gen-1789629705-IB6iBNvKgYLTwuqrTMfg,0.009358089
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,semantic_validation,passed,,IR matches independent oracle on 12 cases; prose metadata is not executable evidence,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,target_execution,blocked,,No validated executor for the emitted target artifact is configured.,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,performance,not_requested,,,0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,oracle_validation,passed,,,0,True,0.01972096300596604,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,design_emission,passed,,,0,True,0.9160102339956211,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,target_compile,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_compile.py"", line 93, in <module>
+    main()
+  File ""/tools/amd_compile.py"", line 26, in main
+    module = Module.parse((work / 'design.mlir').read_text())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":3:22: expected ':'
+",0,True,1.2667394789968967,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,dataflow_frontend,failed,needs_review,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":3:22: expected ':'
+",0,True,0.9161478380046901,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,host_execution,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":3:22: expected ':'
+",0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,2,dataflow_simulation,failed,,"Traceback (most recent call last):
+  File ""/tools/amd_parse.py"", line 9, in <module>
+    program = parse_mlir(Path('/design/design.mlir').read_text(), sha256(Path('/candidate/kernel.cc')),
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/framework/npu_agent/sim/amd_mlir_frontend.py"", line 81, in parse_mlir
+    module = Module.parse(text)
+             ^^^^^^^^^^^^^^^^^^
+aie._mlir_libs._mlir.ir.MLIRError: Unable to parse module assembly:
+error: ""-"":3:22: expected ':'
+",0,True,0.0,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,3,model_code,blocked,infrastructure,complete token accounting unavailable,0,False,7.965665989002446,,
+translation,8ddb012acb4526407fe6f664,cuda_tiled_transpose,amd_xdna2_npu2,structured_ir,3,semantic_validation,passed,,IR matches independent oracle on 12 cases; prose metadata is not executable evidence,0,True,0.0,,

@@ -1,0 +1,10 @@
+{
+  "cpu_pytest": {
+    "passed": 138,
+    "skipped": 23
+  },
+  "real_container_positive_checks": 12,
+  "compileall": "passed",
+  "diff_check": "passed",
+  "main_source_matches_frozen_round2": true
+}

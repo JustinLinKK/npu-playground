@@ -1,0 +1,66 @@
+{
+  "schema_version": "2.0",
+  "name": "cuda_tiled_transpose",
+  "inputs": [
+    {
+      "name": "input",
+      "direction": "input",
+      "dtype": "float32",
+      "shape": [
+        64,
+        96
+      ],
+      "layout": "row_major"
+    }
+  ],
+  "scalars": [],
+  "outputs": [
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float32",
+      "shape": [
+        96,
+        64
+      ],
+      "layout": "row_major"
+    }
+  ],
+  "iteration_domains": [
+    {
+      "variables": [
+        "i",
+        "j"
+      ],
+      "bounds": [
+        "0 <= i < 64",
+        "0 <= j < 96"
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "operation",
+      "op": "transpose",
+      "inputs": [
+        "input"
+      ],
+      "output": "output",
+      "attributes": {
+        "axes": [
+          1,
+          0
+        ],
+        "keepdims": false
+      }
+    }
+  ],
+  "preconditions": [
+    "output[j,i] = input[i,j]"
+  ],
+  "side_effects": [],
+  "numeric_behavior": [],
+  "source_evidence": [
+    "The two shared-tile index swaps implement output[j,i]=input[i,j] for the fixed 64x96 matrix; complete 32x32 blocks cover both dimensions."
+  ]
+}

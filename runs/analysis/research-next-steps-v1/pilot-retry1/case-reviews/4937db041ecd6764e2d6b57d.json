@@ -1,0 +1,116 @@
+{
+  "reviewer": "Codex agent inspection",
+  "reviewed_at": "2026-09-17T10:27:14.887806+00:00",
+  "status": "terminal_review",
+  "source_report": "runs/case-study-v4-deepseek-pilot-retry1/cases/4937db041ecd6764e2d6b57d/report.json",
+  "source_report_sha256": "b880342964c071f116e6256705e633d61def33b26692925e92fa8d37de82a43e",
+  "metrics": {
+    "id": "4937db041ecd6764e2d6b57d",
+    "kernel": "cuda_vector_add",
+    "family": "cuda_vector_add",
+    "target": "intel_npu_4000",
+    "arm": "structured_ir",
+    "repetition": 1,
+    "status": "failed",
+    "offline_pass": false,
+    "success": false,
+    "known_tokens": 51287,
+    "input_tokens": 29675,
+    "output_tokens": 21612,
+    "reasoning_tokens": 17537,
+    "cached_input_tokens": 8448,
+    "usage_complete": true,
+    "timing_complete": true,
+    "active_seconds": 450.3907081830039,
+    "llm_calls": 11,
+    "cycles": 10,
+    "backend_attempts": 9,
+    "semantic_failures": 1,
+    "identical_backend_pairs": 1,
+    "length_finishes": 0,
+    "model_seconds": 439.53837730500527
+  },
+  "cycles": [
+    {
+      "cycle": 1,
+      "cycle_sha256": "13e870db4abfbf45fed53e8428f6a06d412d61146025fac85ba6fafec32fe3cb",
+      "failure_category": "unsupported_ir",
+      "subtype": "unsupported_reduction_metadata",
+      "evidence": "IR validation failed: unsupported reduction metadata",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 2,
+      "cycle_sha256": "4c71e8df03cdb4f362299df13612c259f698b9acbf744bc7c4d406082838bc1c",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Generated graph imports unavailable openvino.runtime.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 3,
+      "cycle_sha256": "e32bc99ef43902260a4e0ee0dc8ad96549fb17c80980d86ccdf1a4ced6af89b0",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as its first positional argument, causing incompatible shape-constructor arguments during graph construction.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 4,
+      "cycle_sha256": "b4f7403db90584afa29b8e7cdd222983c09a411308b1600776414bf69588eb8a",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Generated graph imports unavailable openvino.runtime.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 5,
+      "cycle_sha256": "fe096c734aff1e36cb75d515565db7983a78b13f4b6acdf6626d3a825f79cf14",
+      "failure_category": "backend_api",
+      "subtype": "unavailable_python_api",
+      "evidence": "Generated graph imports unavailable openvino.runtime.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 6,
+      "cycle_sha256": "9ac944a464f7450ac8e97db099c0f5125fef6bfa1a38a05647ed4ad5abdddd3d",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as its first positional argument, causing incompatible shape-constructor arguments during graph construction.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 7,
+      "cycle_sha256": "19279d9ee788b21f84b43fe9a339a38ea74b1b6322b086d311ac10bd454467ef",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as its first positional argument, causing incompatible shape-constructor arguments during graph construction.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 8,
+      "cycle_sha256": "331d8778ebb0cbcb6154e137c7b3338ac8adb7e245591084c15370418cf9cf04",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as its first positional argument, causing incompatible shape-constructor arguments during graph construction.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 9,
+      "cycle_sha256": "a768597f8a8ef19ef97e90debec433b10c09160594f74c0da6e390a71db04d90",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as its first positional argument, causing incompatible shape-constructor arguments during graph construction.",
+      "numerical_validation_reached": false
+    },
+    {
+      "cycle": 10,
+      "cycle_sha256": "109c21f861e929b318eb16b9809c359f6d305da6c8d90f9d8c397cd7954f1900",
+      "failure_category": "backend_api",
+      "subtype": "parameter_constructor_arguments",
+      "evidence": "Generated opset10.parameter passes ov.Type.f32 as its first positional argument, causing incompatible shape-constructor arguments during graph construction.",
+      "numerical_validation_reached": false
+    }
+  ],
+  "interpretation": "Semantic IR passed in cycle 2 and was retained through subsequent backend repairs. All nine backend attempts failed during graph construction; no numerical execution occurred. The validated intermediate did not ensure backend API correctness in this case."
+}

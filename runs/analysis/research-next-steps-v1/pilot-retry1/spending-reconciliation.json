@@ -1,0 +1,49 @@
+{
+  "ledger_sha256": "39aef942ce77a8e18046cc9aba7b16ddb8f435eaaccec4febfe2a899f711520a",
+  "known_spent_usd": "0.9146858058",
+  "known_generation_count": 174,
+  "all_known_charges_match_reports": true,
+  "campaign_known_cost_usd": {
+    "runs/analysis/research-next-steps-v1/route-health-20260917": "0.000005928",
+    "runs/case-study-v4-deepseek-pilot": "0",
+    "runs/case-study-v4-deepseek-pilot-config-key": "0.1870210641",
+    "runs/case-study-v4-deepseek-pilot-retry1": "0.7276588137"
+  },
+  "unresolved_calls": [
+    {
+      "report": "runs/case-study-v4-deepseek-pilot/preflight.json",
+      "report_sha256": "2431f9a3788a554b54db71881a353c3c648f622032b582f5bc6dcb5373152dd7",
+      "status": "blocked",
+      "http_status": null,
+      "cost_known": false,
+      "generation_known": false
+    },
+    {
+      "report": "runs/case-study-v4-deepseek-pilot-config-key/cases/8ddb012acb4526407fe6f664/report.json",
+      "report_sha256": "b23563bfea4ccf109ddef46ee8849906dd292000900ddad2c73ab10765aa0de6",
+      "status": "blocked",
+      "http_status": null,
+      "cost_known": false,
+      "generation_known": false
+    },
+    {
+      "report": "runs/case-study-v4-deepseek-pilot-retry1/cases/4b3e14c89a0b4c3514118c37/report.json",
+      "report_sha256": "45000c79819dd92796195ffb1e8b88f06ac7b7f425721bac391ccc750f9c2394",
+      "status": "blocked",
+      "http_status": 429,
+      "cost_known": false,
+      "generation_known": false
+    },
+    {
+      "report": "runs/case-study-v4-deepseek-pilot-retry1/cases/90ad131dfb260c253c26eed0/report.json",
+      "report_sha256": "d5430d3079172bfbf5e2389e4456f08b44a7d6e3546e58986123099bbdd9587f",
+      "status": "blocked",
+      "http_status": 429,
+      "cost_known": false,
+      "generation_known": false
+    }
+  ],
+  "pending_calls": 0,
+  "accounting_complete": false,
+  "interpretation": "Known charges reconciled exactly. Missing identities/usage remain unknown, not zero; historical continuation was authorized."
+}

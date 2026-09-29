@@ -10,7 +10,8 @@ from .artifacts import bundle_hash, materialize_bundle, store_artifact
 from .compilers import Compiler, DockerCompiler
 from .config import Settings
 from .database import Database
-from .mcts import evaluate_compile
+from .mcts import evaluate_compile, select_winner
+from .validation import policy_exit_code
 from .models import (
     Backend,
     BaselineResult,
@@ -34,7 +35,7 @@ def _prompt(source: str, manifest: KernelManifest, target: TargetProfile) -> str
     else:
         contract = (
             "Return exactly model.py. It must define build_model(manifest=None) and return an ov.Model "
-            "whose Parameter friendly names match the manifest inputs."
+            "whose input and output tensor names match the manifest arguments; explicitly set get_tensor().set_names."
         )
     return f"""Translate this GPU kernel directly to the requested NPU backend in one attempt.
 Return only the requested structured CodeBundle. Do not ask questions. If the semantics cannot be represented,
@@ -149,10 +150,10 @@ def _translate_one_shot_sync(
             )
             database.add_candidate(candidate)
             compile_result = _compile_once(settings, database, compiler, candidate, manifest, target)
-            candidate.evaluation = evaluate_compile(candidate.id, compile_result)
+            candidate.evaluation = evaluate_compile(candidate.id, compile_result, request.validation_policy, target.id)
             database.add_evaluation(candidate.evaluation)
-            accepted = compile_result.success and candidate.evaluation.correctness is not False
-            status = "completed" if accepted else "failed"
+            accepted = select_winner([candidate], request.validation_policy) is not None
+            status = "completed" if accepted else "blocked" if policy_exit_code(candidate.evaluation.validation) == 3 else "failed"
             error = None if accepted else compile_result.stderr[-4000:] or "correctness validation failed"
         except Exception as exc:
             if isinstance(exc, ProviderError) and exc.metadata:
@@ -174,7 +175,7 @@ def _translate_one_shot_sync(
                 compiler_fingerprint=f"{target.id}:{target.compiler_version}",
             )
             database.add_compile_attempt(candidate.id, 0, compile_result)
-            candidate.evaluation = evaluate_compile(candidate.id, compile_result)
+            candidate.evaluation = evaluate_compile(candidate.id, compile_result, request.validation_policy, target.id)
             database.add_evaluation(candidate.evaluation)
             status = "failed"
             error = str(exc)
@@ -188,7 +189,7 @@ def _translate_one_shot_sync(
             )
         )
     completed = sum(item.status == "completed" for item in target_results)
-    status = "completed" if completed == len(target_results) else "partial" if completed else "failed"
+    status = "completed" if completed == len(target_results) else "partial" if completed else "blocked" if all(item.status == "blocked" for item in target_results) else "failed"
     report_path = settings.runs_path / run_id / "report.json"
     result = BaselineResult(
         run_id=run_id,
@@ -212,6 +213,7 @@ async def translate_one_shot(
     compiler: Compiler | None = None,
 ) -> BaselineResult:
     selected = settings or Settings(provider=request.provider, model=request.model)
+    selected.validation_policy = request.validation_policy
     selected.provider = request.provider
     selected.model = request.model
     selected.ensure_directories()
