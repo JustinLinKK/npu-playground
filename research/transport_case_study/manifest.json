@@ -1,0 +1,46 @@
+{
+  "schema_version": "transport-feasibility-v1",
+  "phase": "gate_a",
+  "scoring_frozen": false,
+  "reason": "Planned denominator only; backend legality and launch protocols must be established before scoring.",
+  "dtype": "int32",
+  "launch_counts": [1, 2, 8],
+  "schedule_seeds": [1, 7, 31],
+  "input_seed": 20260930,
+  "limits": {"compile_seconds_per_stage": 180, "compiler_cpus": 2, "compiler_memory": "4g", "max_compiler_jobs": 1, "check_seconds": 30, "max_states": 50000},
+  "baselines": ["B0", "B1", "B2", "B3", "P1", "P2", "P3"],
+  "contracts": {
+    "T1": "out[i] = x[i] + 2*z[i]; tile 16",
+    "T2": "out[j,i] = x[i,j]; out-of-place transpose",
+    "T3": "middle[i] = x[i] + 2*z[i]; out[i] = 2*middle[i]; two workers; tile 16",
+    "T4": "split x into equal contiguous halves; join first half then second half without overlap or holes"
+  },
+  "clean_cases": [
+    {"case_id": "T1-64", "topology": "T1", "shape": [64]},
+    {"case_id": "T1-128", "topology": "T1", "shape": [128]},
+    {"case_id": "T2-8x8", "topology": "T2", "shape": [8, 8]},
+    {"case_id": "T2-8x16", "topology": "T2", "shape": [8, 16]},
+    {"case_id": "T3-64", "topology": "T3", "shape": [64]},
+    {"case_id": "T3-128", "topology": "T3", "shape": [128]},
+    {"case_id": "T4-64", "topology": "T4", "shape": [64]},
+    {"case_id": "T4-128", "topology": "T4", "shape": [128]}
+  ],
+  "mutant_cases": [
+    {"case_id": "M1-a", "clean_parent_id": "T2-8x8", "mutation_class": "M1", "injection_layer": "source_design", "defect": "wrong in-bounds stride"},
+    {"case_id": "M1-b", "clean_parent_id": "T2-8x16", "mutation_class": "M1", "injection_layer": "post_lowering_artifact", "defect": "wrong in-bounds stride"},
+    {"case_id": "M2-a", "clean_parent_id": "T1-64", "mutation_class": "M2", "injection_layer": "source_design", "defect": "swap asymmetric input bindings"},
+    {"case_id": "M2-b", "clean_parent_id": "T3-128", "mutation_class": "M2", "injection_layer": "post_lowering_artifact", "defect": "swap asymmetric input bindings"},
+    {"case_id": "M3-a", "clean_parent_id": "T4-64", "mutation_class": "M3", "injection_layer": "source_design", "defect": "join region overlap"},
+    {"case_id": "M3-b", "clean_parent_id": "T4-128", "mutation_class": "M3", "injection_layer": "post_lowering_artifact", "defect": "join region hole"},
+    {"case_id": "M4-a", "clean_parent_id": "T1-128", "mutation_class": "M4", "injection_layer": "source_design", "defect": "missing output start"},
+    {"case_id": "M4-b", "clean_parent_id": "T3-64", "mutation_class": "M4", "injection_layer": "post_lowering_artifact", "defect": "missing required wait"},
+    {"case_id": "M5-a", "clean_parent_id": "T1-64", "mutation_class": "M5", "injection_layer": "source_design", "defect": "reuse active descriptor"},
+    {"case_id": "M5-b", "clean_parent_id": "T3-128", "mutation_class": "M5", "injection_layer": "post_lowering_artifact", "defect": "rewrite active descriptor"},
+    {"case_id": "M6-a", "clean_parent_id": "T1-128", "mutation_class": "M6", "injection_layer": "post_lowering_artifact", "defect": "stale later-launch address patch; requires supported rebinding"},
+    {"case_id": "M6-b", "clean_parent_id": "T3-64", "mutation_class": "M6", "injection_layer": "post_lowering_artifact", "defect": "stale later-launch address patch; requires supported rebinding"},
+    {"case_id": "M7-a", "clean_parent_id": "T1-64", "mutation_class": "M7", "injection_layer": "source_design", "defect": "missing documented rearm; applicability unknown"},
+    {"case_id": "M7-b", "clean_parent_id": "T3-128", "mutation_class": "M7", "injection_layer": "post_lowering_artifact", "defect": "missing documented restart; applicability unknown"},
+    {"case_id": "M8-a", "clean_parent_id": "T4-64", "mutation_class": "M8", "injection_layer": "source_design", "defect": "completion before both branches write"},
+    {"case_id": "M8-b", "clean_parent_id": "T4-128", "mutation_class": "M8", "injection_layer": "post_lowering_artifact", "defect": "completion before both branches write"}
+  ]
+}

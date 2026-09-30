@@ -1,0 +1,53 @@
+name: Offline NPU validation
+on:
+  pull_request:
+    paths: ['src/**', 'tests/**', 'playground/**', 'scripts/**', 'pyproject.toml', 'uv.lock', '.github/workflows/offline-validation.yml']
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cpu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          python-version: '3.12'
+      - run: uv sync --frozen --extra dev
+      - run: uv run pytest -m 'not container and not requires_npu'
+      - run: uv run python -m compileall -q src tests playground/tools scripts
+      - run: uv lock --check && uv build && git diff --check
+  containers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [amd_xdna2_npu2, intel_npu_4000]
+    env:
+      NPU_AGENT_CONTAINER_TESTS: '1'
+      NPU_AGENT_TEST_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          python-version: '3.12'
+      - run: uv sync --frozen --extra dev
+      - run: docker version
+      - run: uv run npu-agent env build --targets ${{ matrix.target }}
+      - run: uv run npu-agent env smoke --targets ${{ matrix.target }}
+      - run: uv run pytest tests/test_container_integration.py --basetemp=runs/container-tests
+      - run: uv run npu-agent validate-suite tests/fixtures/backends --targets ${{ matrix.target }} --report-dir runs/fixtures
+      - run: uv run python scripts/prepare_validation_corpus.py
+      - run: uv run npu-agent validate-suite runs/validation-corpus --targets ${{ matrix.target }} --report-dir runs/corpus
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: offline-${{ matrix.target }}
+          path: runs/
