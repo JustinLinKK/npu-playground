@@ -166,7 +166,11 @@ openai:
 The experiment settings are in `configs/xdna2-baseline-openai.json`, including the
 configured model ID `gpt-6-astra`, medium reasoning effort, a 32,768-output-token limit
 and an 1,800-second response deadline. The model in this JSON file is authoritative;
-`config.yaml` supplies only the key. Temperature and top-p are not sent to OpenAI.
+`config.yaml` supplies only the key. The JSON has no temperature or top-p because
+GPT-6 Astra rejects them. For other OpenAI models, `provider.temperature` and
+`provider.top_p` are sent only when set, and configuration validation allows them
+only with `"reasoning": false` (effort `none`). Preflight confirms that the exact
+model accepts them before any task runs. Astra has no reasoning-disabled mode.
 The request uses the Responses API, strict JSON schema, no tools, no stored
 conversation and no automatic retries. Keys are excluded from snapshots and logs.
 The request format follows the [official OpenAI Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs).

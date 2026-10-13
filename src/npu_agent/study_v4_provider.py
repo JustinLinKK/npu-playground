@@ -31,17 +31,33 @@ class ProviderConfig(BaseModel):
     upstream_provider: str = "Alibaba"
     reasoning: bool = True
     reasoning_effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
-    temperature: float = Field(default=0.6, ge=0, le=2)
-    top_p: float = Field(default=0.95, gt=0, le=1)
+    temperature: float | None = Field(default=None, ge=0, le=2)
+    top_p: float | None = Field(default=None, gt=0, le=1)
     max_tokens: int = Field(default=16384, ge=256, le=65536)
     timeout_seconds: int = Field(default=900, ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_sampling(cls, data):
+        # OpenRouter routes keep their sampling defaults; OpenAI requests carry no sampling parameters.
+        if isinstance(data, dict) and not str(data.get("model", "")).startswith("gpt-"):
+            return {"temperature": 0.6, "top_p": 0.95} | data
+        return data
 
     @model_validator(mode="after")
     def validate_reasoning(self):
         if "coder-30b" in self.model and self.reasoning:
             raise ValueError("the Qwen3-Coder diagnostic cohort does not support reasoning")
-        if self.model.startswith("gpt-") and (self.endpoint != "https://api.openai.com/v1/responses" or self.upstream_provider != "OpenAI"):
-            raise ValueError("OpenAI models require the direct OpenAI Responses endpoint and upstream_provider OpenAI")
+        if self.model.startswith("gpt-"):
+            if self.endpoint != "https://api.openai.com/v1/responses" or self.upstream_provider != "OpenAI":
+                raise ValueError("OpenAI models require the direct OpenAI Responses endpoint and upstream_provider OpenAI")
+            # OpenAI accepts sampling only at reasoning effort none; preflight confirms the exact model accepts it.
+            if self.reasoning and (self.temperature is not None or self.top_p is not None):
+                raise ValueError("OpenAI accepts temperature and top_p only with reasoning disabled (effort none)")
+            if self.model == "gpt-6-astra" and not self.reasoning:
+                raise ValueError("gpt-6-astra has no reasoning-disabled mode")
+        elif self.temperature is None or self.top_p is None:
+            raise ValueError("OpenRouter requests require temperature and top_p")
         return self
 
 
@@ -233,9 +249,12 @@ class StudyOpenAIProvider(StudyProvider):
                 "reasoning": {"effort": effort}, "max_output_tokens": self.config.max_tokens,
                 "store": False, "stream": False, "text": {"format": {
                     "type": "json_schema", "name": response_model.__name__, "strict": True, "schema": schema}}}
+        sampling = {name: value for name in ("temperature", "top_p") if (value := getattr(self.config, name)) is not None}
+        body |= sampling
         metadata = {"provider": self.name, "model": model,
                     "request_settings": {"model": model, "endpoint": self.config.endpoint, "reasoning_effort": effort,
-                        "max_output_tokens": self.config.max_tokens, "timeout_seconds": self.config.timeout_seconds, "store": False},
+                        "max_output_tokens": self.config.max_tokens, "timeout_seconds": self.config.timeout_seconds, "store": False,
+                        **sampling},
                     "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "schema_sha256": json_digest(schema),
                     "schema_valid": False, "exit_code": 1, "usage": {}, "usage_incomplete": True,
                     "failure_origin": "infrastructure"}
