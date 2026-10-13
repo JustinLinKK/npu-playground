@@ -126,6 +126,21 @@ def test_unknown_fields_and_nonreasoning_coder_are_rejected():
         ProviderConfig(model="qwen/qwen3-coder-30b-a3b-instruct")
 
 
+def test_sampling_parameters_follow_the_provider():
+    assert ProviderConfig().temperature == 0.6 and ProviderConfig().top_p == 0.95
+    assert ProviderConfig(model="qwen/qwen3.8-27b", temperature=0.2).temperature == 0.2
+    with pytest.raises(ValueError, match="require temperature and top_p"):
+        ProviderConfig(temperature=None)
+    config = openai_config(model="gpt-6-astra")
+    assert config.temperature is None and config.top_p is None
+    for field in ("temperature", "top_p"):
+        with pytest.raises(ValueError, match="only with reasoning disabled"):
+            openai_config(**{field: 0.5})
+        assert getattr(openai_config(model="gpt-6-sol", reasoning=False, **{field: 0.5}), field) == 0.5
+    with pytest.raises(ValueError, match="no reasoning-disabled mode"):
+        openai_config(model="gpt-6-astra", reasoning=False)
+
+
 def test_inconsistent_token_accounting_blocks_claims(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-secret")
     data = envelope()
@@ -181,6 +196,23 @@ def test_openai_request_uses_own_key_responses_schema_and_complete_usage(tmp_pat
     assert response.metadata["provider"] == "openai" and response.metadata["generation_id"] == "resp-1"
     assert "cost" not in response.metadata["usage"] and not response.metadata["usage_incomplete"]
     assert "test-secret" not in json.dumps(response.metadata)
+
+
+def test_openai_sampling_is_sent_only_when_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-secret")
+    usage = {"input_tokens": 20, "output_tokens": 40, "total_tokens": 60, "output_tokens_details": {"reasoning_tokens": 0}}
+    requests = []
+
+    def post(request, timeout):
+        requests.append(json.loads(request.data))
+        return io.BytesIO(json.dumps(openai_envelope(model="gpt-6-sol", usage=usage)).encode())
+
+    monkeypatch.setattr("urllib.request.urlopen", post)
+    provider = StudyOpenAIProvider(openai_config(model="gpt-6-sol", reasoning=False, temperature=0.3), tmp_path)
+    response = provider.generate("translate", Hint, provider.config.model)
+    assert requests[0]["reasoning"] == {"effort": "none"} and requests[0]["temperature"] == 0.3
+    assert "top_p" not in requests[0] and "top_p" not in response.metadata["request_settings"]
+    assert response.metadata["request_settings"]["temperature"] == 0.3
 
 
 @pytest.mark.parametrize("kind,origin", [("length", "model_output"), ("bad_json", "model_output"),
