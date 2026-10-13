@@ -19,16 +19,18 @@ MODEL_LICENSES = {
     "deepseek/deepseek-v3.2": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2/blob/main/LICENSE",
     "qwen/qwen3-32b": "https://huggingface.co/Qwen/Qwen3-32B/blob/main/LICENSE",
     "qwen/qwen3-coder-30b-a3b-instruct": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct/blob/main/LICENSE",
+    "qwen/qwen3.8-27b": "https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/LICENSE",
 }
 
 
 class ProviderConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    model: Literal["deepseek/deepseek-v3.2", "qwen/qwen3-32b", "qwen/qwen3-coder-30b-a3b-instruct"] = "deepseek/deepseek-v3.2"
+    model: Literal["deepseek/deepseek-v3.2", "qwen/qwen3-32b", "qwen/qwen3-coder-30b-a3b-instruct", "qwen/qwen3.8-27b", "gpt-6-terra", "gpt-5.6-terra", "gpt-6-sol", "gpt-6-astra"] = "deepseek/deepseek-v3.2"
     endpoint: str = "alibaba/fp8"
     upstream_provider: str = "Alibaba"
     reasoning: bool = True
+    reasoning_effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     temperature: float = Field(default=0.6, ge=0, le=2)
     top_p: float = Field(default=0.95, gt=0, le=1)
     max_tokens: int = Field(default=16384, ge=256, le=65536)
@@ -38,6 +40,8 @@ class ProviderConfig(BaseModel):
     def validate_reasoning(self):
         if "coder-30b" in self.model and self.reasoning:
             raise ValueError("the Qwen3-Coder diagnostic cohort does not support reasoning")
+        if self.model.startswith("gpt-") and (self.endpoint != "https://api.openai.com/v1/responses" or self.upstream_provider != "OpenAI"):
+            raise ValueError("OpenAI models require the direct OpenAI Responses endpoint and upstream_provider OpenAI")
         return self
 
 
@@ -108,11 +112,32 @@ class StudyProvider:
         started = time.perf_counter()
         try:
             with urllib.request.urlopen(request, timeout=self.config.timeout_seconds) as response:
-                envelope = json.load(response)
+                if model == "qwen/qwen3.8-27b":
+                    # OpenRouter can send whitespace heartbeats: socket inactivity is not a total deadline.
+                    metadata["generation_id"] = getattr(response, "headers", {}).get("X-Generation-Id")
+                    chunks = []
+                    while True:
+                        remaining = self.config.timeout_seconds - (time.perf_counter() - started)
+                        if remaining <= 0:
+                            metadata["timeout_kind"] = "total_response_deadline"
+                            raise TimeoutError("OpenRouter total response deadline exceeded")
+                        if getattr(response, "fp", None) is not None:
+                            response.fp.raw._sock.settimeout(remaining)
+                        chunk = response.read1(65536)
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                    envelope = json.loads(b"".join(chunks))
+                else:
+                    envelope = json.load(response)
         except urllib.error.HTTPError as exc:
             metadata["duration_seconds"] = time.perf_counter() - started
             metadata["http_status"] = exc.code
             raise ProviderError(f"OpenRouter HTTP {exc.code}; response and exact usage unavailable", metadata) from None
+        except TimeoutError:
+            metadata["duration_seconds"] = time.perf_counter() - started
+            metadata["timeout_kind"] = "total_response_deadline" if model == "qwen/qwen3.8-27b" else "socket_inactivity"
+            raise ProviderError("OpenRouter transport failed: response deadline exceeded; response and exact usage unavailable", metadata) from None
         except (urllib.error.URLError, OSError, ValueError):
             metadata["duration_seconds"] = time.perf_counter() - started
             raise ProviderError("OpenRouter transport failed; response and exact usage unavailable", metadata) from None
@@ -158,6 +183,141 @@ class StudyProvider:
         except ValueError:
             # Never embed Pydantic input_value (possibly megabytes) in repair feedback.
             raise ProviderError("output token limit reached" if metadata.get("finish_reason") == "length" else
+                                "response does not satisfy the requested JSON schema", metadata, {"content": content}) from None
+        metadata.update(schema_valid=True, failure_origin=None)
+        return ProviderResponse(value=value, metadata=metadata, raw=value.model_dump(mode="json"))
+
+
+class StudyOpenAIProvider(StudyProvider):
+    """Direct, stateless Responses API requests with no hidden retries or tools."""
+
+    name = "openai"
+
+    def _key(self) -> str:
+        key = os.environ.get("OPENAI_API_KEY", "").strip()
+        if not key:
+            import yaml
+
+            try:
+                document = yaml.safe_load((self.repository / "config.yaml").read_text())
+                key = document["openai"]["api_key"].strip()
+            except (OSError, KeyError, TypeError, AttributeError, yaml.YAMLError):
+                raise ProviderError("set OPENAI_API_KEY or openai.api_key in config.yaml") from None
+        if not key:
+            raise ProviderError("the OpenAI API key is empty")
+        return key
+
+    def endpoint_identity(self) -> dict:
+        request = urllib.request.Request(f"https://api.openai.com/v1/models/{self.config.model}",
+                                        headers={"Authorization": f"Bearer {self._key()}"})
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                data = json.load(response)
+        except urllib.error.HTTPError as exc:
+            detail = "model is unavailable to this key; check provider.model in the experiment JSON; " if exc.code == 404 else ""
+            raise ProviderError(f"OpenAI model access check HTTP {exc.code} for {self.config.model}; {detail}no generation request sent",
+                                {"http_status": exc.code, "failure_origin": "infrastructure"}) from None
+        except (urllib.error.URLError, OSError, ValueError):
+            raise ProviderError("OpenAI model access check failed; no generation request sent") from None
+        if not isinstance(data, dict) or data.get("id") != self.config.model:
+            raise ProviderError("OpenAI model access check returned a different model; no generation request sent")
+        return {"model": data["id"], "tag": self.config.endpoint, "provider_name": "OpenAI",
+                "created": data.get("created"), "owned_by": data.get("owned_by")}
+
+    def generate(self, prompt: str, response_model: type[BaseModel], model: str | None = None) -> ProviderResponse:
+        if model != self.config.model:
+            raise ValueError("model conflicts with the frozen v4 configuration")
+        schema = _strict_json_schema(response_model)
+        effort = self.config.reasoning_effort if self.config.reasoning else "none"
+        body = {"model": model, "input": [{"role": "user", "content": prompt}],
+                "reasoning": {"effort": effort}, "max_output_tokens": self.config.max_tokens,
+                "store": False, "stream": False, "text": {"format": {
+                    "type": "json_schema", "name": response_model.__name__, "strict": True, "schema": schema}}}
+        metadata = {"provider": self.name, "model": model,
+                    "request_settings": {"model": model, "endpoint": self.config.endpoint, "reasoning_effort": effort,
+                        "max_output_tokens": self.config.max_tokens, "timeout_seconds": self.config.timeout_seconds, "store": False},
+                    "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "schema_sha256": json_digest(schema),
+                    "schema_valid": False, "exit_code": 1, "usage": {}, "usage_incomplete": True,
+                    "failure_origin": "infrastructure"}
+        request = urllib.request.Request(self.config.endpoint, data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {self._key()}"}, method="POST")
+        started = time.perf_counter()
+        try:
+            with urllib.request.urlopen(request, timeout=self.config.timeout_seconds) as response:
+                metadata["request_id"] = getattr(response, "headers", {}).get("x-request-id")
+                chunks = []
+                while True:
+                    remaining = self.config.timeout_seconds - (time.perf_counter() - started)
+                    if remaining <= 0:
+                        raise TimeoutError("OpenAI total response deadline exceeded")
+                    if getattr(response, "fp", None) is not None:
+                        response.fp.raw._sock.settimeout(remaining)
+                    chunk = response.read1(65536)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                envelope = json.loads(b"".join(chunks))
+        except urllib.error.HTTPError as exc:
+            metadata.update(duration_seconds=time.perf_counter() - started, http_status=exc.code)
+            raise ProviderError(f"OpenAI HTTP {exc.code}; response and exact usage unavailable", metadata) from None
+        except TimeoutError:
+            metadata.update(duration_seconds=time.perf_counter() - started, timeout_kind="total_response_deadline")
+            raise ProviderError("OpenAI transport failed: response deadline exceeded; response and exact usage unavailable", metadata) from None
+        except (urllib.error.URLError, OSError, ValueError):
+            metadata["duration_seconds"] = time.perf_counter() - started
+            raise ProviderError("OpenAI transport failed; response and exact usage unavailable", metadata) from None
+        metadata["duration_seconds"] = time.perf_counter() - started
+        if not isinstance(envelope, dict):
+            raise ProviderError("invalid OpenAI envelope", metadata)
+        usage = envelope.get("usage") or {}
+        counts = normalize_usage(usage)
+        complete = counts["input_tokens"] is not None and counts["output_tokens"] is not None
+        metadata.update(usage=usage, usage_incomplete=not complete, generation_id=envelope.get("id"),
+                        returned_model=envelope.get("model"), upstream_provider="OpenAI")
+        if envelope.get("error") or envelope.get("model") != model:
+            raise ProviderError("provider error or returned model differs from the frozen configuration", metadata)
+        if not complete or not envelope.get("id"):
+            raise ProviderError("OpenAI omitted complete usage or response identity", metadata)
+        reason_tokens = counts["reasoning_output_tokens"]
+        declared_total = usage.get("total_tokens")
+        if ((declared_total is not None and (isinstance(declared_total, bool) or declared_total != counts["total_tokens"])) or
+                (reason_tokens is not None and reason_tokens > counts["output_tokens"]) or
+                (counts["cached_input_tokens"] is not None and counts["cached_input_tokens"] > counts["input_tokens"])):
+            metadata["usage_incomplete"] = True
+            raise ProviderError("OpenAI returned inconsistent token accounting", metadata)
+        if reason_tokens is None or (not self.config.reasoning and reason_tokens != 0):
+            raise ProviderError("reasoning telemetry is absent or conflicts with the requested mode", metadata)
+        status = envelope.get("status")
+        limit_reached = status == "incomplete" and (envelope.get("incomplete_details") or {}).get("reason") == "max_output_tokens"
+        metadata["finish_reason"] = "length" if limit_reached else "stop" if status == "completed" else status
+        if status != "completed" and not limit_reached:
+            raise ProviderError("OpenAI returned an unsuccessful response status", metadata)
+        content = ""
+        try:
+            output = envelope["output"]
+            if not isinstance(output, list):
+                raise TypeError("expected output items")
+            for item in output:
+                if item["type"] == "reasoning":
+                    continue
+                if item["type"] != "message" or item.get("role") != "assistant":
+                    raise ProviderError("OpenAI returned a tool request or unsupported output item", metadata)
+                for part in item["content"]:
+                    if part["type"] == "refusal":
+                        metadata["failure_origin"] = "model_output"
+                        raise ProviderError("OpenAI refused the requested structured output", metadata)
+                    if part["type"] != "output_text" or not isinstance(part["text"], str):
+                        raise TypeError("expected output text")
+                    content += part["text"]
+            metadata.update(exit_code=0, failure_origin="model_output")
+            if limit_reached:
+                raise ValueError("output token limit reached")
+            value = response_model.model_validate_json(content)
+        except (KeyError, IndexError, TypeError):
+            metadata.update(exit_code=1, failure_origin="infrastructure")
+            raise ProviderError("malformed OpenAI response envelope", metadata) from None
+        except ValueError:
+            raise ProviderError("output token limit reached" if limit_reached else
                                 "response does not satisfy the requested JSON schema", metadata, {"content": content}) from None
         metadata.update(schema_valid=True, failure_origin=None)
         return ProviderResponse(value=value, metadata=metadata, raw=value.model_dump(mode="json"))

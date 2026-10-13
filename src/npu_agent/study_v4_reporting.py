@@ -108,6 +108,10 @@ def paired_comparison(rows: list[dict], config: StudyConfig, target: str, compar
 
 def build_report(root: Path) -> dict:
     campaign = json.loads((root / "campaign.json").read_text())
+    if campaign['config']['protocol'] == 'xdna2-baseline-v1':
+        from .xdna2_baseline import build_report as baseline_report
+
+        return baseline_report(root)
     config = StudyConfig.model_validate(campaign["config"])
     rows = []
     for case in campaign["cases"]:

@@ -109,6 +109,8 @@ class OracleSpec(BaseModel):
         "scalar_mul",
         "sigmoid",
         "silu",
+        "kb_matmul", "kb_diagonal", "kb_activation", "kb_rms_norm", "kb_pool",
+        "kb_reduce", "kb_cumsum", "kb_mse",
     ]
     parameters: dict[str, Any] = Field(default_factory=dict)
 

@@ -125,8 +125,14 @@ class DockerCompiler:
             if not path.exists():
                 return ''
             with path.open('rb') as handle:
-                handle.seek(max(0, path.stat().st_size - 4000))
-                return _bounded(handle.read(), 4000)
+                if path.stat().st_size <= 4000:
+                    return _bounded(handle.read(), 4000)
+                marker = '\n[... omitted; see full log ...]\n'
+                head_size = (4000 - len(marker)) // 2
+                tail_size = 4000 - len(marker) - head_size
+                head = _bounded(handle.read(head_size), head_size)
+                handle.seek(-tail_size, os.SEEK_END)
+                return head + marker + _bounded(handle.read(), tail_size)
         stdout, stderr = excerpt(stdout_path), excerpt(stderr_path)
         if code and category is None:
             category = 'source_compile' if tool in ('amd_emit.py', 'intel_build_graph.py') else 'target_compile' if tool.endswith('compile.py') or tool == 'intel_compile_graph.py' else 'source_execution'

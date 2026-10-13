@@ -52,6 +52,10 @@ def check_contract(manifest: KernelManifest) -> None:
         'layer_norm': {'axis', 'epsilon'}, 'attention': {'scale'},
         'moving_average': {'window'}, 'conv2d': {'padding'}, 'gamma_correction': {'gamma'},
         'sigmoid': set(), 'silu': set(),
+        'kb_matmul': {'transpose_a', 'transpose_b'}, 'kb_diagonal': set(),
+        'kb_activation': {'kind'}, 'kb_rms_norm': {'epsilon'},
+        'kb_pool': {'kind', 'kernel', 'stride', 'padding', 'dilation'},
+        'kb_reduce': {'kind', 'axis'}, 'kb_cumsum': {'axis', 'reverse'}, 'kb_mse': set(),
     }
     unknown = set(manifest.oracle.parameters) - allowed[manifest.oracle.operation]
     if unknown:

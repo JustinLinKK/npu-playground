@@ -10,6 +10,10 @@ from .models import KernelManifest
 
 
 def reference(operation: str, args: list[np.ndarray], parameters: dict[str, Any]) -> np.ndarray:
+    if operation.startswith('kb_'):
+        from .kernelbench import reference as kernelbench_reference
+
+        return kernelbench_reference(operation, args, parameters)
     x = args[0]
     p = parameters
     if operation == 'vector_add':
@@ -112,8 +116,14 @@ GOLDENS = [
 
 
 def validate_goldens(operation: str) -> None:
+    if operation.startswith('kb_'):
+        from .kernelbench import GOLDENS as kernelbench_goldens
+
+        cases = kernelbench_goldens
+    else:
+        cases = GOLDENS
     found = False
-    for op, args, parameters, expected in GOLDENS:
+    for op, args, parameters, expected in cases:
         if op != operation:
             continue
         found = True

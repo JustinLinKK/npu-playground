@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 
 from npu_agent.compilers import DockerCompiler, _bounded
-from npu_agent.config import Settings, INTEL_NPU_4000
+from npu_agent.config import Settings, INTEL_NPU_4000, AMD_XDNA2_NPU2
 from npu_agent.models import StageResult, KernelManifest
 from npu_agent.testcases import generate_cases
 
@@ -56,3 +56,25 @@ def test_parallel_container_limits_and_graceful_stop_boundary(tmp_path):
     assert command[command.index('--cpus') + 1] == '6'
     assert command[command.index('--memory') + 1] == '8g'
     assert invoke.call_args.kwargs['start_new_session'] is True
+
+
+def test_container_diagnostic_preserves_crash_cause_and_exit_summary(tmp_path):
+    import subprocess
+
+    diagnostic = ('Register not in mBMs\nPLEASE submit a bug report\n' + 'backtrace\n' * 1000 +
+                  'clang frontend command failed with exit code 134\n')
+
+    def invoke(command, **kwargs):
+        kwargs['stdout'].write(b'compiler invocation\n')
+        kwargs['stderr'].write(diagnostic.encode())
+        return subprocess.CompletedProcess(command, 1)
+
+    compiler = DockerCompiler(Settings(repository_path=Path.cwd()))
+    with patch('npu_agent.compilers.subprocess.run', side_effect=invoke):
+        stage = compiler._run(tmp_path, tmp_path / 'target', AMD_XDNA2_NPU2, 'amd_compile.py', {})
+    assert stage.status == 'failed'
+    assert stage.message.startswith('Register not in mBMs\nPLEASE submit a bug report\n')
+    assert stage.message.endswith('clang frontend command failed with exit code 134\n')
+    assert len(stage.message) <= 4000
+    assert stage.details['stdout'] == 'compiler invocation\n'
+    assert (tmp_path / 'target.stderr.log').read_text() == diagnostic

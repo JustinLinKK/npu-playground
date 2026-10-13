@@ -8,6 +8,7 @@ import json
 import signal
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Event, RLock
@@ -21,7 +22,7 @@ from npu_agent.config import Settings, TARGETS
 from npu_agent.database import Database
 from npu_agent.models import TranslationRequest
 from npu_agent.study_v4 import StudyCompiler, StudyConfig
-from npu_agent.study_v4_provider import StudyProvider
+from npu_agent.study_v4_provider import StudyOpenAIProvider, StudyProvider
 from npu_agent.validation import sha256, write_json
 from research.run_budgeted_study import BudgetGuard, amount, import_spending, run_remaining
 
@@ -70,7 +71,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--ledger", type=Path, required=True)
+    budget = parser.add_mutually_exclusive_group(required=True)
+    budget.add_argument("--ledger", type=Path)
+    budget.add_argument("--budget-on-openrouter", action="store_true",
+                        help="Delegate dollar limits to OpenRouter; do not enforce a local spending ledger")
+    budget.add_argument("--budget-on-openai", action="store_true",
+                        help="Use direct OpenAI with token/time limits and no local dollar ledger; check billing on OpenAI")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--compiler-jobs", type=int, default=4)
     parser.add_argument("--acknowledge-unknown-spending", action="store_true")
@@ -79,35 +85,54 @@ def main():
     if args.workers < 1 or args.compiler_jobs < 1 or args.compiler_jobs > args.workers:
         raise ValueError("require positive workers and compiler jobs <= workers")
     root = args.output.resolve()
-    if not (root / "campaign.json").exists():
+    external_budget = args.budget_on_openrouter or args.budget_on_openai
+    if not external_budget and not (root / "campaign.json").exists():
         raise ValueError("parallel continuation requires an existing frozen campaign")
+    root.mkdir(parents=True, exist_ok=True)
     spec = importlib.util.spec_from_file_location("v4_runner", ROOT / "scripts/case_study_v4.py")
     runner = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(runner)
     config = StudyConfig.model_validate_json(args.config.read_text())
-    with args.ledger.with_suffix(".lock").open("a") as ledger_lock, (root / ".campaign.lock").open("a") as campaign_lock:
-        fcntl.flock(ledger_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    if args.budget_on_openai != config.provider.model.startswith("gpt-"):
+        raise ValueError("the direct OpenAI configuration requires --budget-on-openai")
+    provider_name = "openai" if args.budget_on_openai else "openrouter"
+    with ExitStack() as locks:
+        if args.ledger is not None:
+            ledger_lock = locks.enter_context(args.ledger.with_suffix(".lock").open("a"))
+            fcntl.flock(ledger_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        campaign_lock = locks.enter_context((root / ".campaign.lock").open("a"))
         fcntl.flock(campaign_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        existing = (root / "campaign.json").exists()
         selected, families, corpus = runner.inputs(config)
         campaign = runner.prepare(root, config, selected, families, corpus)
-        ledger = json.loads(args.ledger.read_text())
-        if ledger.get("pending_call") or ledger.get("pending_calls"):
-            raise ValueError("unresolved pending requests; reconcile before continuing")
-        roots = {Path(call["campaign"]) for call in ledger["calls"].values()}
-        import_spending(ledger, sorted(roots | {root}), args.acknowledge_unknown_spending)
+        enforcement = provider_name if external_budget else "local"
+        if existing and campaign.get("budget_enforcement", "local") != enforcement:
+            raise ValueError("budget enforcement changed; use a new output directory")
+        if external_budget:
+            campaign["budget_enforcement"] = enforcement
+            write_json(root / "campaign.json", campaign)
         stop = Event()
-        guard = ParallelBudgetGuard(ledger, args.ledger, root, stop, args.acknowledge_unknown_spending)
-        if (ledger.get("unknown_spending") and not args.acknowledge_unknown_spending) or guard.spent() >= amount(ledger["limit_usd"]):
-            raise ValueError("spending limit or unresolved billing prevents continuation")
-        write_json(args.ledger, ledger)
+        guard = None
+        if args.ledger is not None:
+            ledger = json.loads(args.ledger.read_text())
+            if ledger.get("pending_call") or ledger.get("pending_calls"):
+                raise ValueError("unresolved pending requests; reconcile before continuing")
+            roots = {Path(call["campaign"]) for call in ledger["calls"].values()}
+            import_spending(ledger, sorted(roots | {root}), args.acknowledge_unknown_spending)
+            guard = ParallelBudgetGuard(ledger, args.ledger, root, stop, args.acknowledge_unknown_spending)
+            if (ledger.get("unknown_spending") and not args.acknowledge_unknown_spending) or guard.spent() >= amount(ledger["limit_usd"]):
+                raise ValueError("spending limit or unresolved billing prevents continuation")
+            write_json(args.ledger, ledger)
         settings = Settings(database_path=root / "state.sqlite", runs_path=root / "cases", repository_path=ROOT,
-            provider="openrouter", model=config.provider.model, validation_policy="offline-validated",
+            provider=provider_name, model=config.provider.model, validation_policy="offline-validated",
             experiment_id=root.name, compiler_cpus=config.compiler_cpus, compiler_memory=config.compiler_memory,
             max_compiler_jobs=args.compiler_jobs, compiler_timeout_seconds=config.compiler_timeout_seconds)
         settings.ensure_directories()
-        provider, compiler = StudyProvider(config.provider, ROOT), StudyCompiler(settings)
-        generate = provider.generate
-        provider.generate = lambda *a, **kw: guard.generate(generate, *a, **kw)
+        provider_type = StudyOpenAIProvider if args.budget_on_openai else StudyProvider
+        provider, compiler = provider_type(config.provider, ROOT), StudyCompiler(settings)
+        if guard is not None:
+            generate = provider.generate
+            provider.generate = lambda *a, **kw: guard.generate(generate, *a, **kw)
         previous = runner.install_pause_handlers(stop)
         try:
             runner.preflight(root, campaign, config, provider, compiler, selected, stop)
@@ -125,6 +150,7 @@ def main():
                     raise ValueError("unresolved blocked case prevents continuation")
                 pending.append(case)
             event = {"event": "parallel_resume", "at": datetime.now(UTC).isoformat(),
+                "budget_enforcement": enforcement,
                 "workers": args.workers, "compiler_jobs": args.compiler_jobs, "cases": [case["id"] for case in pending],
                 "implementation_sha256": sha256(Path(__file__)),
                 "budget_guard_sha256": sha256(ROOT / "research/run_budgeted_study.py"),
@@ -143,7 +169,7 @@ def main():
                     return "paused"
                 source, manifest, _ = selected[case["kernel"]]
                 request = TranslationRequest(source_path=str(source), manifest_path=str(manifest),
-                    targets=[TARGETS[case["target"]]], provider="openrouter", model=config.provider.model,
+                    targets=[TARGETS[case["target"]]], provider=provider_name, model=config.provider.model,
                     validation_policy="offline-validated")
                 try:
                     state = runner.run_case(request, settings, config, case, provider, compiler, stop)

@@ -82,8 +82,12 @@ def source_files() -> list[Path]:
 
 
 def freeze(config: StudyConfig, corpus: dict) -> dict:
+    paths = source_files()
+    if config.protocol == "xdna2-baseline-v1":
+        paths += [ROOT / relative for relative in ("research/run_xdna2_baseline.py", "research/run_budgeted_study.py",
+                  "research/run_parallel_study.py", "docs/xdna2-baseline.md")]
     return {"config": config.model_dump(), "corpus": corpus,
-            "source_hashes": {str(path.relative_to(ROOT)): sha256(path) for path in source_files()},
+            "source_hashes": {str(path.relative_to(ROOT)): sha256(path) for path in paths},
             "python": sys.version, "platform": platform.platform(),
             "packages": {name: importlib.metadata.version(name) for name in ("numpy", "pydantic", "langgraph")},
             "targets": {name: TARGETS[name].model_dump(mode="json") for name in config.targets}}
@@ -91,6 +95,8 @@ def freeze(config: StudyConfig, corpus: dict) -> dict:
 
 def prepare(root: Path, config: StudyConfig, selected: dict, families: dict, corpus: dict) -> dict:
     identity = freeze(config, corpus)
+    if config.protocol == "xdna2-baseline-v1" and len(selected) == 40:
+        identity["preparation_sha256"] = sha256(root / "preparation.json")
     path = root / "campaign.json"
     if path.exists():
         campaign = json.loads(path.read_text())
@@ -100,7 +106,8 @@ def prepare(root: Path, config: StudyConfig, selected: dict, families: dict, cor
     cases = case_schedule(config, list(selected), families)
     campaign = {"config": config.model_dump(), "identity": identity, "cases": cases, "status": "prepared",
                 "created_at": datetime.now(UTC).isoformat(), "events": []}
-    for path in source_files():
+    for relative in identity["source_hashes"]:
+        path = ROOT / relative
         destination = root / "frozen" / "repository" / path.relative_to(ROOT)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(path.read_bytes())
@@ -141,7 +148,8 @@ def preflight(root: Path, campaign: dict, config: StudyConfig, provider: StudyPr
         if not preflight_state["compiler_smokes"][target]["validation"]["offline_contract_met"]:
             raise ValueError("compiler/evaluator preflight failed; no model calls should be launched")
     # Validate actual response schemas, including the large IR schema, on an unrelated toy task.
-    for schema in (CodeBundle, Hint, ExecutableKernelIR):
+    schemas = (CodeBundle,) if config.protocol == "xdna2-baseline-v1" else (CodeBundle, Hint, ExecutableKernelIR)
+    for schema in schemas:
         if stop.is_set():
             return
         name = schema.__name__
@@ -154,6 +162,9 @@ def preflight(root: Path, campaign: dict, config: StudyConfig, provider: StudyPr
                   "For CodeBundle use intel_openvino and no files, with unsupported_operations=['preflight only']. "
                   "For KernelIR use schema_version 2.0, a reshape from x to y with shape [4], no scalar arguments, "
                   "no side effects. This is a schema check, not a benchmark translation.")
+        if config.protocol == "xdna2-baseline-v1":
+            prompt = ("Transport/schema preflight only. Return a CodeBundle with backend amd_xdna2, "
+                      "files=[], and unsupported_operations=['preflight only']. This is not a translation task.")
         call = {"status": "in_flight", "prompt": prompt, "schema": schema.model_json_schema(),
                 "started_at": datetime.now(UTC).isoformat()}
         preflight_state["calls"][name] = call
@@ -170,14 +181,17 @@ def preflight(root: Path, campaign: dict, config: StudyConfig, provider: StudyPr
     if stop.is_set():
         return
     reasoning = [normalize_usage(call["metadata"]["usage"])["reasoning_output_tokens"] for call in preflight_state["calls"].values()]
-    if config.provider.reasoning and not any((value or 0) > 0 for value in reasoning):
+    if config.provider.reasoning and provider.name == "openai" and any(value is None for value in reasoning):
+        raise ValueError("reasoning-enabled preflight returned incomplete reasoning token telemetry")
+    # OpenAI can use zero reasoning tokens for this simple schema probe at nonzero effort.
+    if config.provider.reasoning and provider.name != "openai" and not any((value or 0) > 0 for value in reasoning):
         raise ValueError("reasoning-enabled preflight returned no observed reasoning tokens")
     # Archive representative prompts for review before the first benchmark call.
     first = next(iter(selected.values()))
     for arm in config.arms:
         for target in config.targets:
             prompt = stage_prompt("code" if arm == "direct" else "intermediate", arm, first[0].read_text(), first[2],
-                                  TARGETS[target], None, "")
+                                  TARGETS[target], None, "", protocol=config.protocol)
             destination = root / "prompt-preview" / f"{arm}-{target}.txt"
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(prompt)

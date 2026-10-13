@@ -330,15 +330,21 @@ def test_signal_handler_cannot_reenter_event_set():
             signal.signal(sig, handler)
 
 
-def test_preflight_uses_all_schemas_and_is_idempotent(tmp_path):
+@pytest.mark.parametrize("provider_name,reasoning_tokens,passes", [("openrouter", 1, True), ("openrouter", 0, False),
+                                                                ("openai", 0, True), ("openai", None, False)])
+def test_preflight_uses_all_schemas_and_is_idempotent(tmp_path, provider_name, reasoning_tokens, passes):
     from npu_agent.validation import finalize_validation
+    from test_study_v4_provider import openai_config
 
     module = runner_module()
-    config = StudyConfig(kernels=["cuda_vector_add"], targets=["intel_npu_4000"], repetitions=1)
+    config = StudyConfig(kernels=["cuda_vector_add"], targets=["intel_npu_4000"], repetitions=1,
+                         **({"provider": openai_config()} if provider_name == "openai" else {}))
     selected, families, corpus = module.inputs(config)
     campaign = module.prepare(tmp_path, config, selected, families, corpus)
 
     class PreflightProvider(Provider):
+        name = provider_name
+
         def endpoint_identity(self):
             return {"provider": "fake"}
 
@@ -346,7 +352,7 @@ def test_preflight_uses_all_schemas_and_is_idempotent(tmp_path):
             source, _, manifest = selected["cuda_vector_add"]
             prompt = stage_prompt("code", "direct", source.read_text(), manifest, TARGETS["intel_npu_4000"], None, "")
             response = super().generate(prompt, schema, model)
-            response.metadata["usage"]["reasoning_output_tokens"] = 1
+            response.metadata["usage"]["reasoning_output_tokens"] = reasoning_tokens
             return response
 
     class PreflightCompiler(CorpusCompiler):
@@ -359,6 +365,13 @@ def test_preflight_uses_all_schemas_and_is_idempotent(tmp_path):
             return result
 
     provider, compiler = PreflightProvider(), PreflightCompiler()
+    provider.model = config.provider.model
+    if not passes:
+        for _ in range(2):
+            with pytest.raises(ValueError, match="reasoning-enabled preflight"):
+                module.preflight(tmp_path, campaign, config, provider, compiler, selected, Event())
+        assert len(provider.calls) == 3 and compiler.calls == 1
+        return
     module.preflight(tmp_path, campaign, config, provider, compiler, selected, Event())
     assert provider.calls == ["CodeBundle", "Hint", "ExecutableKernelIR"]
     assert compiler.calls == 1

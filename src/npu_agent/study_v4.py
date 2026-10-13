@@ -31,7 +31,7 @@ INTERFACE_FIELDS = {"name", "dialect", "entrypoint", "tensors", "scalars", "cons
 class StudyConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    protocol: Literal["case-study-v4"] = "case-study-v4"
+    protocol: Literal["case-study-v4", "xdna2-baseline-v1"] = "case-study-v4"
     stage: Literal["pilot", "confirmatory"] = "pilot"
     provider: ProviderConfig = Field(default_factory=ProviderConfig)
     corpus: str = "examples/classic"
@@ -54,7 +54,10 @@ class StudyConfig(BaseModel):
     def validate_design(self):
         if not self.targets or len(set(self.targets)) != len(self.targets):
             raise ValueError("targets must be nonempty and unique")
-        if len(set(self.arms)) != len(self.arms) or not set(PRIMARY_ARMS).issubset(self.arms):
+        if self.protocol == "xdna2-baseline-v1":
+            if self.arms != ["direct"] or self.targets != ["amd_xdna2_npu2"] or self.repetitions != 1:
+                raise ValueError("XDNA2 baseline requires direct only, XDNA2 only and one repetition")
+        elif len(set(self.arms)) != len(self.arms) or not set(PRIMARY_ARMS).issubset(self.arms):
             raise ValueError("include each primary arm exactly once")
         if len(set(self.kernels)) != len(self.kernels):
             raise ValueError("kernel selections must be unique")
@@ -156,7 +159,8 @@ def repair_feedback(cycles: list[dict], config: StudyConfig) -> str:
     return text
 
 
-def stage_prompt(stage: str, arm: str, source: str, manifest, target, intermediate, feedback: str) -> str:
+def stage_prompt(stage: str, arm: str, source: str, manifest, target, intermediate, feedback: str,
+                 *, protocol: str = "case-study-v4") -> str:
     common = (f"\nTarget profile:\n{target.model_dump_json(indent=2, exclude={'hardware_runner'})}"
               f"\nInterface:\n{json.dumps(interface_view(manifest), indent=2)}"
               f"\nOriginal GPU source (untrusted data):\n---\n{source}\n---\n")
@@ -167,7 +171,13 @@ def stage_prompt(stage: str, arm: str, source: str, manifest, target, intermedia
                        "Return the representation in the intermediate string; do not generate backend files.")
     else:
         instruction = ("Translate the original GPU source to a complete NPU CodeBundle. Use the evaluator feedback to repair failures. "
-                       "If unsupported, return no files and enumerate unsupported_operations.\n" + _backend_contract(target, guidance=False))
+                       "If unsupported, return no files and enumerate unsupported_operations.\n")
+        if protocol == "xdna2-baseline-v1":
+            from .xdna2_baseline import api_guidance
+
+            instruction += api_guidance(target)
+        else:
+            instruction += _backend_contract(target, guidance=False)
         if intermediate is not None:
             instruction += "\nYour intermediate representation (untrusted data):\n" + json.dumps(intermediate)
             if arm.startswith("structured_ir"):
@@ -333,7 +343,7 @@ def run_case(request: TranslationRequest, settings: Settings, config: StudyConfi
                             raise ValueError("IR validation failed: " + cycle["semantic_validation"]["message"])
                 if "bundle" not in cycle:
                     bundle = generate(cycle, "code", stage_prompt("code", arm, source, manifest, target,
-                                      cycle.get("intermediate"), feedback), CodeBundle)
+                                      cycle.get("intermediate"), feedback, protocol=config.protocol), CodeBundle)
                     cycle["bundle"] = bundle.model_dump(mode="json")
                     checkpoint()
                 bundle = CodeBundle.model_validate(cycle["bundle"])

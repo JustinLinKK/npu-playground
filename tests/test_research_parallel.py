@@ -105,3 +105,79 @@ def test_fresh_database_supports_parallel_case_checkpoints(tmp_path):
         assert database.get_run("hinted_ir") is not None
     finally:
         database.close()
+
+
+@pytest.mark.parametrize("billing_error", [False, True])
+@pytest.mark.parametrize("provider_name", ["openrouter", "openai"])
+def test_provider_budget_runs_without_ledger_and_stops_on_provider_error(tmp_path, monkeypatch, billing_error, provider_name):
+    from npu_agent.providers import ProviderError
+    from test_study_v4 import Provider, RepairCompiler, runner_module
+    from test_study_v4_provider import openai_config
+
+    runner = runner_module()
+    preflights = []
+    monkeypatch.setattr(runner, "preflight", lambda *a: preflights.append(True))
+    monkeypatch.setattr(parallel, "importlib", SimpleNamespace(util=SimpleNamespace(
+        spec_from_file_location=lambda *a: SimpleNamespace(loader=SimpleNamespace(exec_module=lambda m: None)),
+        module_from_spec=lambda spec: runner)))
+    config = parallel.StudyConfig(protocol="xdna2-baseline-v1", arms=["direct"],
+                                  targets=["amd_xdna2_npu2"], repetitions=1, kernels=["cuda_vector_add"],
+                                  **({"provider": openai_config()} if provider_name == "openai" else {}))
+    path = tmp_path / "config.json"
+    path.write_text(config.model_dump_json())
+    ledger = tmp_path / "budget.json"
+    original = '{"limit_usd":"50","known_spent_usd":"100","pending_calls":{"lost":{}},"unknown_spending":true}'
+    ledger.write_text(original)
+
+    class ExternalProvider(Provider):
+        def generate(self, *args):
+            if billing_error:
+                self.calls.append("billing_error")
+                raise ProviderError("provider HTTP error", {"http_status": 429 if provider_name == "openai" else 402, "usage_incomplete": True})
+            response = super().generate(*args)
+            if len(self.calls) == 1:
+                response.metadata["usage"]["cost"] = 100
+            else:
+                response.metadata["usage"].pop("cost", None)
+            return response
+
+    provider = ExternalProvider()
+    provider.model = config.provider.model
+    compiler = RepairCompiler()
+    monkeypatch.setattr(parallel, "StudyOpenAIProvider" if provider_name == "openai" else "StudyProvider", lambda *a: provider)
+    monkeypatch.setattr(parallel, "StudyCompiler", lambda settings: compiler)
+    run_case = runner.run_case
+
+    def execute(request, settings, *args):
+        assert request.provider == settings.provider == provider_name
+        return run_case(request, settings, *args)
+
+    monkeypatch.setattr(runner, "run_case", execute)
+    root = tmp_path / "campaign"
+    command = ["parallel", "--config", str(path), "--output", str(root),
+               "--workers", "1", "--compiler-jobs", "1"]
+    monkeypatch.setattr(parallel.sys, "argv", command + ["--budget-on-" + provider_name])
+    assert parallel.main() == (2 if billing_error else 0)
+    campaign = json.loads((root / "campaign.json").read_text())
+    assert campaign["budget_enforcement"] == provider_name and preflights == [True]
+    assert len(provider.calls) == (1 if billing_error else 2)
+    assert ledger.read_text() == original and not ledger.with_suffix(".lock").exists()
+    assert not (root / "budget.json").exists()
+    report = (root / "results/REPORT.md").read_text()
+    assert ("Direct OpenAI has no local dollar cap" if provider_name == "openai" else "delegated to OpenRouter") in report
+    assert "$50 threshold" not in report
+    if provider_name == "openai":
+        assert "gpt-5.6-terra" in report and "Qwen" not in report and "billed dollars unavailable" in report
+    summary = json.loads((root / "summary.json").read_text())
+    assert summary["known_total_spend_usd"] is None and summary["billing_complete"] is None
+    if provider_name == "openai":
+        assert summary["known_evaluation_cost_usd"] is None
+    if billing_error:
+        with pytest.raises(ValueError, match="blocked case"):
+            parallel.main()
+    else:
+        assert parallel.main() == 0
+    assert len(provider.calls) == (1 if billing_error else 2)
+    monkeypatch.setattr(parallel.sys, "argv", command + ["--ledger", str(ledger)])
+    with pytest.raises(ValueError, match="requires --budget-on-openai" if provider_name == "openai" else "budget enforcement changed"):
+        parallel.main()
