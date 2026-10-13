@@ -1,0 +1,48 @@
+{
+  "verified_evaluation_cases": 96,
+  "statuses": {
+    "completed": 91,
+    "failed": 5
+  },
+  "recorded_tokens": 3096227,
+  "revisions": {
+    "guided-breadth-v2": 96
+  },
+  "compiler_fingerprints": [
+    "7c99147dc7722cb3eda7d4458099936e912b0605075a8145b78b8fc327111eda"
+  ],
+  "treatment_implementation_sha256": {
+    "bucketed_length/runner.py": "5d74ace4b4498510c5744e36a7aa047692df11b1635e7d02fcd208d8d08a109c",
+    "bucketed_length/feedback_loop/__init__.py": "9b76d02c5c3c345bf1b507c9fb775a4bc91cf6871eab609ae9bf7b579459ec0c",
+    "src/npu_agent/workflow.py": "874108a198cfbfe1b55e28ab5e58fd74b58b165f890a6524993568109963350d"
+  },
+  "frozen_inputs_verified": true,
+  "complete_token_accounting": true,
+  "synthetic_cases": 0,
+  "followup": [
+    {
+      "case": "free_form--r1",
+      "status": "completed",
+      "tokens": 16205,
+      "winner": 1
+    },
+    {
+      "case": "free_form--r2",
+      "status": "completed",
+      "tokens": 14573,
+      "winner": 1
+    },
+    {
+      "case": "skeleton--r1",
+      "status": "completed",
+      "tokens": 10298,
+      "winner": 1
+    },
+    {
+      "case": "skeleton--r2",
+      "status": "completed",
+      "tokens": 10349,
+      "winner": 1
+    }
+  ]
+}

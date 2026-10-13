@@ -1,0 +1,40 @@
+{
+  "revision": "guided-breadth-v2",
+  "model": "gpt-5.6-terra",
+  "reasoning": "xhigh",
+  "seed_shapes": {
+    "add": [
+      64
+    ],
+    "reduce": [
+      64
+    ],
+    "gemv": [
+      8,
+      16
+    ]
+  },
+  "evaluation_shapes": {
+    "add": [
+      128
+    ],
+    "reduce": [
+      128
+    ],
+    "gemv": [
+      16,
+      32
+    ]
+  },
+  "repetitions": 2,
+  "arms_per_kernel": 16,
+  "planned_evaluation_cases": 96,
+  "token_budget_per_case": 200000,
+  "max_repairs": 5,
+  "population": 4,
+  "selection_seed": 70123,
+  "validation": "offline-validated",
+  "seed_library_frozen_before_evaluation": true,
+  "scope": "Exploratory three-operation study; held-out shapes, same operation families. Not a statistical confirmation.",
+  "stopping_rule": "One frozen 96-case evaluation after pilot passes. Retain failures; revise only on diagnosed harness defects, retaining every prior run."
+}
