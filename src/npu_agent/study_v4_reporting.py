@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .providers import normalize_usage
-from .study_v4 import StudyConfig
+from .study_v4 import BASELINE_PROTOCOLS, StudyConfig
 from .validation import write_json
 
 
@@ -108,7 +108,7 @@ def paired_comparison(rows: list[dict], config: StudyConfig, target: str, compar
 
 def build_report(root: Path) -> dict:
     campaign = json.loads((root / "campaign.json").read_text())
-    if campaign['config']['protocol'] == 'xdna2-baseline-v1':
+    if campaign['config']['protocol'] in BASELINE_PROTOCOLS:
         from .xdna2_baseline import build_report as baseline_report
 
         return baseline_report(root)

@@ -25,18 +25,20 @@ from .workflow import _backend_contract
 
 
 PRIMARY_ARMS = ("direct", "hinted_ir", "structured_ir")
+# Forty-task, direct-only baselines that share calibration, budget runners and reporting.
+BASELINE_PROTOCOLS = ("xdna2-baseline-v1", "intel-npu-baseline-v1")
 INTERFACE_FIELDS = {"name", "dialect", "entrypoint", "tensors", "scalars", "constraints", "tolerance", "numerical_domain"}
 
 
 class StudyConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    protocol: Literal["case-study-v4", "xdna2-baseline-v1"] = "case-study-v4"
+    protocol: Literal["case-study-v4", "xdna2-baseline-v1", "intel-npu-baseline-v1"] = "case-study-v4"
     stage: Literal["pilot", "confirmatory"] = "pilot"
     provider: ProviderConfig = Field(default_factory=ProviderConfig)
     corpus: str = "examples/classic"
     kernels: list[str] = Field(default_factory=list)
-    targets: list[Literal["amd_xdna2_npu2", "intel_npu_4000"]] = Field(default_factory=lambda: ["amd_xdna2_npu2", "intel_npu_4000"])
+    targets: list[Literal["amd_xdna2_npu2", "intel_npu_4000", "intel_npu_3720"]] = Field(default_factory=lambda: ["amd_xdna2_npu2", "intel_npu_4000"])
     arms: list[Literal["direct", "hinted_ir", "structured_ir", "structured_ir_no_validation", "structured_ir_no_reuse", "hinted_ir_no_reuse"]] = Field(default_factory=lambda: list(PRIMARY_ARMS))
     repetitions: int = Field(default=3, ge=1)
     seed: int = 20260917
@@ -57,6 +59,9 @@ class StudyConfig(BaseModel):
         if self.protocol == "xdna2-baseline-v1":
             if self.arms != ["direct"] or self.targets != ["amd_xdna2_npu2"] or self.repetitions != 1:
                 raise ValueError("XDNA2 baseline requires direct only, XDNA2 only and one repetition")
+        elif self.protocol == "intel-npu-baseline-v1":
+            if self.arms != ["direct"] or self.targets != ["intel_npu_3720"] or self.repetitions != 1:
+                raise ValueError("Intel NPU baseline requires direct only, intel_npu_3720 only and one repetition")
         elif len(set(self.arms)) != len(self.arms) or not set(PRIMARY_ARMS).issubset(self.arms):
             raise ValueError("include each primary arm exactly once")
         if len(set(self.kernels)) != len(self.kernels):

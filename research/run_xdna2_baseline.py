@@ -1,4 +1,4 @@
-"""Prepare/calibrate/run the 40-task baseline through OpenRouter or direct OpenAI."""
+"""Prepare/calibrate/run the 40-task XDNA2 or Intel NPU baseline through OpenRouter or direct OpenAI."""
 from __future__ import annotations
 
 import argparse
@@ -54,8 +54,9 @@ def calibration_gate(campaign):
     metadata = json.loads((campaign / 'campaign.json').read_text())
     preflight_path = campaign / 'preflight.json'
     preflight = json.loads(preflight_path.read_text()) if preflight_path.exists() else {}
+    target = metadata.get('config', {}).get('targets', ['amd_xdna2_npu2'])[0]
     evaluator_ready = (preflight.get('status') == 'completed' and
-                       preflight.get('compiler_smokes', {}).get('amd_xdna2_npu2', {})
+                       preflight.get('compiler_smokes', {}).get(target, {})
                        .get('validation', {}).get('offline_contract_met') is True)
     rows = []
     for case in metadata['cases']:

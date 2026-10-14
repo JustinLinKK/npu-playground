@@ -22,7 +22,7 @@ from npu_agent.models import CodeBundle, KernelManifest, TranslationRequest
 from npu_agent.oracles import execute_oracle, validate_goldens
 from npu_agent.providers import ProviderError, normalize_usage
 from npu_agent.scenarios import ExecutableKernelIR
-from npu_agent.study_v4 import Hint, StudyCompiler, StudyConfig, case_schedule, run_case, stage_prompt
+from npu_agent.study_v4 import BASELINE_PROTOCOLS, Hint, StudyCompiler, StudyConfig, case_schedule, run_case, stage_prompt
 from npu_agent.study_v4_provider import StudyProvider
 from npu_agent.study_v4_reporting import build_report
 from npu_agent.testcases import generate_cases
@@ -83,9 +83,10 @@ def source_files() -> list[Path]:
 
 def freeze(config: StudyConfig, corpus: dict) -> dict:
     paths = source_files()
-    if config.protocol == "xdna2-baseline-v1":
+    if config.protocol in BASELINE_PROTOCOLS:
+        guide = "docs/xdna2-baseline.md" if config.protocol == "xdna2-baseline-v1" else "docs/intel-npu-local.md"
         paths += [ROOT / relative for relative in ("research/run_xdna2_baseline.py", "research/run_budgeted_study.py",
-                  "research/run_parallel_study.py", "docs/xdna2-baseline.md")]
+                  "research/run_parallel_study.py", guide)]
     return {"config": config.model_dump(), "corpus": corpus,
             "source_hashes": {str(path.relative_to(ROOT)): sha256(path) for path in paths},
             "python": sys.version, "platform": platform.platform(),
@@ -95,7 +96,7 @@ def freeze(config: StudyConfig, corpus: dict) -> dict:
 
 def prepare(root: Path, config: StudyConfig, selected: dict, families: dict, corpus: dict) -> dict:
     identity = freeze(config, corpus)
-    if config.protocol == "xdna2-baseline-v1" and len(selected) == 40:
+    if config.protocol in BASELINE_PROTOCOLS and len(selected) == 40:
         identity["preparation_sha256"] = sha256(root / "preparation.json")
     path = root / "campaign.json"
     if path.exists():
@@ -145,10 +146,15 @@ def preflight(root: Path, campaign: dict, config: StudyConfig, provider: StudyPr
             result = compiler.compile(fixture, root / "preflight-compiler" / target, manifest, TARGETS[target])
             preflight_state.setdefault("compiler_smokes", {})[target] = result.model_dump(mode="json")
             write_json(path, preflight_state)
-        if not preflight_state["compiler_smokes"][target]["validation"]["offline_contract_met"]:
+        smoke = preflight_state["compiler_smokes"][target]["validation"]
+        if not smoke["offline_contract_met"]:
             raise ValueError("compiler/evaluator preflight failed; no model calls should be launched")
+        # A configured runner must reach the device; otherwise every observation would silently be lost.
+        if TARGETS[target].hardware_runner and smoke["stages"]["target_execution"]["engine"] != "physical_npu":
+            raise ValueError("hardware runner configured but the preflight fixture did not execute on the physical NPU: "
+                             + smoke["stages"]["target_execution"]["message"][-500:])
     # Validate actual response schemas, including the large IR schema, on an unrelated toy task.
-    schemas = (CodeBundle,) if config.protocol == "xdna2-baseline-v1" else (CodeBundle, Hint, ExecutableKernelIR)
+    schemas = (CodeBundle,) if config.protocol in BASELINE_PROTOCOLS else (CodeBundle, Hint, ExecutableKernelIR)
     for schema in schemas:
         if stop.is_set():
             return
@@ -162,8 +168,9 @@ def preflight(root: Path, campaign: dict, config: StudyConfig, provider: StudyPr
                   "For CodeBundle use intel_openvino and no files, with unsupported_operations=['preflight only']. "
                   "For KernelIR use schema_version 2.0, a reshape from x to y with shape [4], no scalar arguments, "
                   "no side effects. This is a schema check, not a benchmark translation.")
-        if config.protocol == "xdna2-baseline-v1":
-            prompt = ("Transport/schema preflight only. Return a CodeBundle with backend amd_xdna2, "
+        if config.protocol in BASELINE_PROTOCOLS:
+            backend = TARGETS[config.targets[0]].backend.value
+            prompt = (f"Transport/schema preflight only. Return a CodeBundle with backend {backend}, "
                       "files=[], and unsupported_operations=['preflight only']. This is not a translation task.")
         call = {"status": "in_flight", "prompt": prompt, "schema": schema.model_json_schema(),
                 "started_at": datetime.now(UTC).isoformat()}

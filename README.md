@@ -4,6 +4,8 @@ For the current research results and next-step decision, start with the
 [cloud analysis handoff](docs/cloud-analysis-handoff.md).
 For the forty-task XDNA2 baseline and local Ryzen AI NPU replay, see
 [the baseline guide](docs/xdna2-baseline.md).
+To execute Intel NPU blobs on a local Intel NPU 3720 from WSL2, see
+[the local Intel NPU guide](docs/intel-npu-local.md).
 For the seven-direction training-free translation study, see
 [the study guide](bucketed_length/README.md).
 

@@ -277,8 +277,8 @@ class DockerCompiler:
                 compiler_fingerprint=validation.toolchain_fingerprint, timeout_seconds=self.settings.compiler_timeout_seconds,
                 warmup_count=target.executor_warmup_count, measurement_count=target.executor_measurement_count)
             write_json(run / 'execution-request.json', request.model_dump(mode='json'))
-            stages['target_execution'] = execute_target(request, target.hardware_runner)
-        for directory in ("source", "contract", "inputs", "target", "parsed", "host", "dataflow"):
+            stages['target_execution'] = execute_target(request, target.hardware_runner, run / 'target_execution')
+        for directory in ("source", "contract", "inputs", "target", "parsed", "host", "dataflow", "target_execution"):
             for path in sorted((run / directory).rglob("*")):
                 if path.is_file() and not path.is_symlink():
                     artifacts[str(path.relative_to(run))] = str(path)

@@ -59,3 +59,42 @@ def test_malformed_timing_is_rejected(samples, count):
     payload.update(timing_samples_ms=samples, measurement_count=count, timing_provenance='test')
     with pytest.raises(ValueError):
         ExecutionResult.model_validate(payload)
+
+
+def test_fp16_verdict_separates_device_precision_from_wrong_results():
+    r = request()
+    result = response(r)
+    case_id, case = next(iter(r.cases.items()))
+    rounded = {n: decode_tensor(t).astype(np.float16).astype(np.float32) for n, t in case.items()}
+    # An exact FP16 device: FP16 inputs, true sum, FP16 output.
+    device = {n: v.astype(np.float16).astype(np.float32) for n, v in execute_oracle(r.manifest, rounded).items()}
+    result.outputs[case_id] = {n: encode_tensor(v) for n, v in device.items()}
+    stage = validate_response(r, result)
+    assert stage.correct is False and stage.details['cases_passed'] == 0
+    assert stage.details['fp16_correct'] is True and stage.details['fp16_cases_passed'] == 1
+    assert stage.details['fp16_comparisons'][0]['outputs']['output']['max_error_half_ulps'] == 0
+    result.outputs[case_id] = {n: encode_tensor(np.zeros_like(v)) for n, v in device.items()}
+    assert validate_response(r, result).details['fp16_correct'] is False
+
+
+def test_executor_outputs_are_saved_with_hashes(tmp_path):
+    import sys
+
+    from npu_agent.validation import sha256
+
+    blob = tmp_path / 'compiled.blob'
+    blob.write_bytes(b'blob')
+    r = request().model_copy(update={'artifacts': {'compiled.blob': str(blob)}, 'timeout_seconds': 60,
+                                     'artifact_sha256': {'compiled.blob': sha256(blob)}})
+    payload = tmp_path / 'response.json'
+    payload.write_text(response(r).model_dump_json())
+    script = tmp_path / 'executor.py'
+    script.write_text(f'import sys\nsys.stdin.read()\nsys.stdout.write(open({str(payload)!r}).read())\n')
+    stage = execute_target(r, [sys.executable, str(script)], tmp_path / 'target_execution')
+    assert stage.status == 'passed' and stage.details['fp16_correct'] is True
+    (name, digest), = stage.artifacts.items()
+    assert name.startswith('target_execution/') and sha256(tmp_path / name) == digest
+    case_id, case = next(iter(r.cases.items()))
+    expected = execute_oracle(r.manifest, {n: decode_tensor(t) for n, t in case.items()})
+    with np.load(tmp_path / name) as saved:
+        assert np.array_equal(saved['output'], expected['output'])

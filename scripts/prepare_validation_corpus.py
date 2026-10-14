@@ -119,7 +119,7 @@ def prepare(corpus: Path, destination: Path):
     manifests.append(Path('tests/fixtures/backends/intel_npu_4000/sigmoid/manifest.json'))
     for path in manifests:
         manifest = json.loads(path.read_text())
-        for target in ('amd_xdna2_npu2', 'intel_npu_4000'):
+        for target in ('amd_xdna2_npu2', 'intel_npu_4000', 'intel_npu_3720'):
             directory = destination / target / manifest['name']
             directory.mkdir(parents=True, exist_ok=True)
             (directory / 'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')

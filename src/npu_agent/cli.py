@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .baseline import translate_one_shot
 from .compilers import DockerCompiler, build_images, smoke_images, capabilities
-from .config import TARGETS, Settings
+from .config import DEFAULT_TARGETS, TARGETS, Settings
 from .database import Database
 from .models import BaselineResult, KernelManifest, TranslationRequest, TranslationResult, ValidationPolicy
 from .validation import finalize_validation, policy_exit_code, write_json
@@ -52,7 +52,7 @@ def _request(args: argparse.Namespace, source: Path, manifest: Path) -> Translat
 
 def _add_search_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--validation-policy", choices=[p.value for p in ValidationPolicy], default="offline-validated")
-    parser.add_argument("--targets", type=_target_ids, default=list(TARGETS))
+    parser.add_argument("--targets", type=_target_ids, default=list(DEFAULT_TARGETS))
     parser.add_argument("--provider", choices=["openai", "codex-cli", "claude-cli"], default="openai")
     parser.add_argument("--model")
     parser.add_argument("--search-rounds", type=int, default=3)
@@ -74,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     environment_commands = environment.add_subparsers(dest="env_command", required=True)
     for name in ("build", "smoke", "capabilities"):
         command = environment_commands.add_parser(name)
-        command.add_argument("--targets", type=_target_ids, default=list(TARGETS))
+        command.add_argument("--targets", type=_target_ids, default=list(DEFAULT_TARGETS))
         if name == "capabilities":
             command.add_argument("--json", action="store_true")
 
@@ -86,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     baseline = commands.add_parser("baseline", help="run a direct one-shot source-to-target baseline")
     baseline.add_argument("source", type=Path)
     baseline.add_argument("--manifest", type=Path, required=True)
-    baseline.add_argument("--targets", type=_target_ids, default=list(TARGETS))
+    baseline.add_argument("--targets", type=_target_ids, default=list(DEFAULT_TARGETS))
     baseline.add_argument("--provider", choices=["openai", "codex-cli", "claude-cli"], default="openai")
     baseline.add_argument("--model")
     baseline.add_argument("--validation-policy", choices=[p.value for p in ValidationPolicy], default="offline-validated")
@@ -104,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
             command.add_argument("--manifest", required=True, type=Path)
             command.add_argument("--target", required=True, choices=list(TARGETS))
         else:
-            command.add_argument("--targets", type=_target_ids, default=list(TARGETS))
+            command.add_argument("--targets", type=_target_ids, default=list(DEFAULT_TARGETS))
 
     runs = commands.add_parser("runs", help="inspect or resume runs")
     runs_commands = runs.add_subparsers(dest="runs_command", required=True)

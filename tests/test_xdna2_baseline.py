@@ -342,3 +342,189 @@ def test_kernelbench_scalar_container_probe(tmp_path, number):
     result = compiler.compile(candidate, tmp_path / 'validation', manifest, TARGETS['amd_xdna2_npu2'])
     assert result.validation.offline_contract_met, result.stderr
     assert result.validation.stages['host_execution'].cases_run == 12
+
+
+def intel_config(**updates):
+    from test_study_v4_provider import openai_config
+
+    values = dict(protocol='intel-npu-baseline-v1', arms=['direct'], targets=['intel_npu_3720'], repetitions=1,
+                  provider=openai_config(model='gpt-6-astra'))
+    return StudyConfig(**(values | updates))
+
+
+def test_intel_baseline_protocol_is_direct_only_on_3720():
+    config = StudyConfig.model_validate(json.loads(Path('configs/intel-npu-baseline-openai.json').read_text()))
+    assert (config.protocol, config.targets, config.arms, config.repetitions) == ('intel-npu-baseline-v1', ['intel_npu_3720'], ['direct'], 1)
+    assert config.provider.model == 'gpt-6-astra' and config.provider.temperature is None and config.provider.top_p is None
+    amd = StudyConfig.model_validate(json.loads(Path('configs/xdna2-baseline-openai.json').read_text()))
+    assert config.model_dump(exclude={'protocol', 'targets'}) == amd.model_dump(exclude={'protocol', 'targets'})
+    for updates in ({'arms': ['direct', 'hinted_ir']}, {'targets': ['intel_npu_4000']}, {'repetitions': 2}):
+        with pytest.raises(ValueError, match='Intel NPU baseline'):
+            intel_config(**updates)
+
+
+def test_intel_baseline_prompt_is_the_unguided_openvino_contract():
+    source, _, manifest = discover_kernels(Path('examples/classic'))['cuda_vector_add']
+    target = TARGETS['intel_npu_3720'].model_copy(update={'hardware_runner': ['secret-runner-path']})
+    args = ('code', 'direct', source.read_text(), manifest, target, None, '')
+    prompt = stage_prompt(*args, protocol='intel-npu-baseline-v1')
+    assert prompt == stage_prompt(*args)
+    assert 'Return exactly model.py' in prompt and 'Container invocation and submission contract' not in prompt
+    assert 'secret-runner-path' not in prompt and '"hardware": "3720"' in prompt
+
+
+@pytest.mark.parametrize('stages,status,category', [
+    ({'graph_construction': {'status': 'failed', 'message': "NameError: name 'ops' is not defined"}}, 'failed', 'graph_source'),
+    ({'graph_construction': {'status': 'passed'},
+      'target_compile': {'status': 'failed', 'message': 'ValueError: ambiguous or unnamed input port: set()'},
+      'host_execution': {'status': 'failed', 'message': 'ValueError: ambiguous or unnamed input port: set()'}}, 'failed', 'graph_interface'),
+    ({'graph_construction': {'status': 'passed'}, 'target_compile': {'status': 'failed', 'message': 'Unsupported attribute'},
+      'host_execution': {'status': 'passed'}}, 'failed', 'target_source_or_verifier'),
+    ({'target_compile': {'status': 'passed'}, 'host_execution': {'status': 'passed'},
+      'target_execution': {'status': 'failed', 'error_category': 'numerical_mismatch'}}, 'passed', 'passed'),
+])
+def test_intel_attempt_classification_never_counts_npu_observations(stages, status, category):
+    assert classify_attempt({'status': status, 'compile_result': {'validation': {'stages': stages}}})['category'] == category
+
+
+def test_calibration_gate_uses_the_campaign_target_smoke(tmp_path):
+    from research.run_xdna2_baseline import calibration_gate
+
+    cases = [{'id': str(i), 'kernel': str(i)} for i in range(4)]
+    (tmp_path / 'campaign.json').write_text(json.dumps({'config': intel_config().model_dump(), 'cases': cases,
+                                                        'identity': {'source_hashes': {}}}))
+    for case in cases:
+        folder = tmp_path / 'cases' / case['id']
+        folder.mkdir(parents=True)
+        (folder / 'report.json').write_text(json.dumps({'status': 'failed', 'cycles': [{'status': 'failed', 'compile_result': {
+            'validation': {'stages': {'graph_construction': {'status': 'failed', 'message': 'NameError'}}}}}]}))
+    for smoke_target, expected in (('amd_xdna2_npu2', 'failed'), ('intel_npu_3720', 'passed')):
+        (tmp_path / 'preflight.json').write_text(json.dumps({'status': 'completed', 'compiler_smokes': {
+            smoke_target: {'validation': {'offline_contract_met': True}}}}))
+        assert calibration_gate(tmp_path)['status'] == expected
+
+
+@pytest.mark.parametrize('engine,passes', [('physical_npu', True), ('', False)])
+def test_intel_preflight_requires_the_runner_to_reach_the_npu(tmp_path, monkeypatch, engine, passes):
+    from threading import Event
+
+    from npu_agent.models import StageResult
+    from npu_agent.validation import finalize_validation
+    from test_experiment import CorpusCompiler
+    from test_study_v4 import Provider, runner_module
+
+    module = runner_module()
+    monkeypatch.setitem(module.TARGETS, 'intel_npu_3720',
+                        TARGETS['intel_npu_3720'].model_copy(update={'hardware_runner': ['fake-runner']}))
+    config = intel_config(kernels=['cuda_vector_add'])
+    selected, families, corpus = module.inputs(config)
+    campaign = module.prepare(tmp_path, config, selected, families, corpus)
+    assert campaign['identity']['targets']['intel_npu_3720']['hardware_runner'] == ['fake-runner']
+
+    class PreflightProvider(Provider):
+        name = 'openai'
+
+        def endpoint_identity(self):
+            return {'provider': 'fake'}
+
+        def generate(self, prompt, schema, model):
+            assert 'backend intel_openvino' in prompt
+            source, _, manifest = selected['cuda_vector_add']
+            response = super().generate(stage_prompt('code', 'direct', source.read_text(), manifest,
+                                                     TARGETS['intel_npu_3720'], None, ''), schema, model)
+            response.metadata['usage']['reasoning_output_tokens'] = 0
+            return response
+
+    class PreflightCompiler(CorpusCompiler):
+        def identity(self, target):
+            return {'fingerprint': 'fake'}
+
+        def compile(self, *args):
+            result = super().compile(*args)
+            # FP16 mismatches still prove execution; only a missing device run blocks the campaign.
+            result.validation.stages['target_execution'] = StageResult(
+                status='failed', correct=False if engine else None, engine=engine, cases_run=12 if engine else 0,
+                error_category='numerical_mismatch' if engine else 'execution_process',
+                message='' if engine else 'RuntimeError: OpenVINO reports no NPU device')
+            finalize_validation(result.validation, 'offline-validated')
+            return result
+
+    provider, compiler = PreflightProvider(), PreflightCompiler()
+    provider.model = config.provider.model
+    if not passes:
+        with pytest.raises(ValueError, match='did not execute on the physical NPU: RuntimeError: OpenVINO reports no NPU'):
+            module.preflight(tmp_path, campaign, config, provider, compiler, selected, Event())
+        assert provider.calls == []
+        return
+    module.preflight(tmp_path, campaign, config, provider, compiler, selected, Event())
+    assert provider.calls == ['CodeBundle'] and compiler.calls == 1
+    assert json.loads((tmp_path / 'preflight.json').read_text())['status'] == 'completed'
+
+
+def test_intel_report_records_npu_observations_beside_offline_acceptance(tmp_path):
+    import csv
+
+    from npu_agent.study_v4 import case_schedule
+    from npu_agent.xdna2_baseline import build_report
+
+    names = ['cuda_reduce_sum', 'cuda_vector_add']
+    config = intel_config(kernels=names)
+    runner_target = TARGETS['intel_npu_3720'].model_copy(update={'hardware_runner': ['fake-runner']}).model_dump(mode='json')
+    campaign = {'config': config.model_dump(), 'status': 'completed', 'budget_enforcement': 'openai',
+                'identity': {'targets': {'intel_npu_3720': runner_target}},
+                'cases': case_schedule(config, names, {name: name for name in names})}
+    (tmp_path / 'campaign.json').write_text(json.dumps(campaign))
+
+    def cycle(number, host, npu, error, fp16=None):
+        details = {'comparisons': [{'test_id': 'normal-0', 'correct': npu, 'outputs': {'output': {'max_absolute_error': error}}},
+                                   {'test_id': 'zeros', 'correct': True, 'outputs': {'output': {'max_absolute_error': 0.0}}}]}
+        if fp16 is not None:
+            details.update(fp16_correct=fp16, fp16_cases_passed=2 if fp16 else 1, fp16_comparisons=[
+                {'test_id': 'normal-0', 'correct': fp16, 'outputs': {'output': {'max_error_half_ulps': 1.5 if fp16 else 900.0}}}])
+        execution = {'status': 'passed' if npu else 'failed', 'engine': 'physical_npu', 'correct': npu, 'cases_run': 2,
+                     'details': details}
+        stages = {'oracle_validation': {'status': 'passed', 'correct': True}, 'graph_construction': {'status': 'passed'},
+                  'target_compile': {'status': 'passed'}, 'target_execution': execution,
+                  'host_execution': {'status': 'passed', 'correct': True} if host else
+                                    {'status': 'failed', 'correct': False, 'error_category': 'numerical_mismatch'}}
+        usage = {'input_tokens': 10, 'output_tokens': 5, 'total_tokens': 15}
+        return {'number': number, 'status': 'passed' if host else 'failed', 'compile_result': {'validation': {'stages': stages}},
+                'calls': {'code': {'status': 'completed', 'metadata': {'usage': usage}}}}
+
+    histories = {'cuda_vector_add': [cycle(1, False, False, 0.5, False), cycle(2, True, False, 8.8e-4, True)],
+                 'cuda_reduce_sum': [cycle(1, True, True, 1e-6, True)]}
+    for case in campaign['cases']:
+        folder = tmp_path / 'cases' / case['id']
+        folder.mkdir(parents=True)
+        (folder / 'report.json').write_text(json.dumps({'status': 'completed', 'active_seconds': 1.0,
+                                                        'cycles': histories[case['kernel']]}))
+    summary = build_report(tmp_path)
+    assert summary['offline_passes'] == 2
+    assert summary['physical_npu'] == {'executed_attempts': 3, 'execution_errors': 0, 'accepted_tasks_executed': 2,
+                                       'accepted_tasks_within_tolerance': 1, 'accepted_tasks_fp16_correct': 2,
+                                       'cpu_npu_agreement': {'cpu_fail/npu_fail': 1, 'cpu_pass/npu_fail': 1, 'cpu_pass/npu_pass': 1},
+                                       'accepted_case_pass_rate': {'cases_run': 4, 'manifest_tolerance': 0.75, 'fp16_verdict': 1.0}}
+    with (tmp_path / 'results/tasks.csv').open() as stream:
+        rows = {row['kernel']: row for row in csv.DictReader(stream)}
+    assert (rows['cuda_vector_add']['npu_status'], float(rows['cuda_vector_add']['npu_max_abs_err'])) == ('failed', 8.8e-4)
+    assert (rows['cuda_vector_add']['npu_fp16_correct'], float(rows['cuda_vector_add']['npu_fp16_max_half_ulps'])) == ('True', 1.5)
+    report = (tmp_path / 'results/REPORT.md').read_text()
+    assert '# Intel NPU 3720 direct baseline' in report and 'OpenVINO CPU graph correctness on twelve inputs' in report
+    assert 'Physical NPU observation (did not affect acceptance)' in report and '1/2 / 2/2 (8.80e-04)' in report
+    assert '| Case pass rate, manifest tolerance | 75.0% |' in report and '| Case pass rate, FP16 verdict | 100.0% |' in report
+    assert 'The emitted physical NPU binary was not executed' not in report and '| unavailable |' in report
+
+
+def test_amd_report_text_is_unchanged_without_a_runner(tmp_path):
+    from npu_agent.study_v4 import case_schedule
+    from npu_agent.xdna2_baseline import build_report
+
+    config = baseline_config()
+    campaign = {'config': config.model_dump(), 'status': 'blocked', 'blocker': 'Provider calibration unavailable',
+                'cases': case_schedule(config, ['add'], {'add': 'add'})}
+    (tmp_path / 'campaign.json').write_text(json.dumps(campaign))
+    assert 'physical_npu' not in build_report(tmp_path)
+    report = (tmp_path / 'results/REPORT.md').read_text()
+    assert report.startswith('# XDNA2 direct baseline') and 'Physical NPU observation' not in report
+    assert ('independent host/dataflow correctness on twelve inputs. The emitted physical NPU binary was not executed; '
+            'NPU performance is unmeasured.') in report
