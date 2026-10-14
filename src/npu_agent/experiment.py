@@ -15,7 +15,7 @@ from threading import BoundedSemaphore, Event, local
 from typing import Any
 
 from .compilers import Compiler, DockerCompiler
-from .config import TARGETS, Settings
+from .config import DEFAULT_TARGETS, TARGETS, Settings
 from .database import Database
 from .models import KernelManifest, TranslationRequest
 from .providers import ExperimentCodexProvider, ExperimentOpenRouterProvider, ProviderError, StructuredProvider
@@ -228,7 +228,7 @@ def run_experiment(
         unknown_kernels = set(selected_kernels) - set(kernels)
         if unknown_kernels:
             raise ValueError(f"unknown kernels: {sorted(unknown_kernels)}")
-        target_ids = target_ids or list(TARGETS)
+        target_ids = target_ids or list(DEFAULT_TARGETS)
         unknown_targets = set(target_ids) - set(TARGETS)
         if unknown_targets:
             raise ValueError(f"unknown targets: {sorted(unknown_targets)}")

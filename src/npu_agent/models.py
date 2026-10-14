@@ -22,6 +22,7 @@ _HARDWARE_TOKENS = (
     "objectfifo",
     "aie.tile",
     "npu4000",
+    "npu3720",
     "npu2",
 )
 
