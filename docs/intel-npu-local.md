@@ -135,27 +135,36 @@ The supervisor records two verdicts:
 - **FP16 verdict.** `fp16_correct`, `fp16_cases_passed` and `fp16_comparisons`
   model what an exact FP16 device returns: round every float input and float
   scalar to FP16, evaluate the independent oracle on those values, and round the
-  result to FP16. The NPU output passes if every element is within 8 FP16
-  half-ulps (8 × 2⁻¹¹) of that output tensor's peak magnitude, plus 2⁻²⁴ for
-  all-zero references. Each comparison also records `max_error_half_ulps`.
+  result to FP16. Each element must satisfy
+  `|npu − reference| ≤ atol + rtol·|reference|` with `rtol = 1e-3, atol = 1e-5`.
+  These are PyTorch's float16 defaults (`torch.testing.assert_close`). They are
+  set in `src/npu_agent/executors.py`, and the baseline pipeline uses them
+  automatically.
 
 **Why model both roundings.** The device really does receive FP16 inputs. If
 the reference rounded only the output, input rounding would count against the
 kernel, and ill-conditioned operations amplify it. For example, layer-norm rows of
 1 ± 8e-7 become exactly 1.0 in FP16, so a correct device returns the bias.
+Rounding the reference's result to FP16 means a perfect FP16 device scores zero
+error.
 
-**What remains.** The 8-half-ulp allowance covers rounding inside the device:
-intermediates, accumulation order and approximate transcendentals. The verdict
-does not emulate each candidate operation in FP16. That would tie the reference
-to the candidate's own algorithm.
+**What the tolerances imply.**
 
-**Known limitation.** The allowance scales with the output's peak magnitude. An
-output that is near zero everywhere because terms cancel, like the matmul
-`cancellation` case, can fail although the error is far below the magnitude of
-the summed products.
+- `rtol = 1e-3` allows about one FP16 ulp relative to each element.
+- `atol = 1e-5` is below FP16's resolution at unit magnitude, so two device
+  effects count as failures:
+  - **Subnormal flush-to-zero.** The NPU returns FP16 subnormals (below 6.1e-5)
+    as exactly 0. Each comparison counts these in `flushed_subnormals`.
+  - **Cancellation residue.** Elements that land near zero because large terms
+    cancel keep an absolute error at the resolution of those terms.
+- `rtol = atol = 2⁻¹⁰` (one FP16 ulp at magnitude 1) absorbs both effects. Use the
+  rescore command below to compare settings.
 
-Re-run a finished campaign's compiled blobs, with no model calls, to obtain both
-verdicts for campaigns recorded earlier:
+Each comparison also records `max_scaled_error` (error divided by its bound) and
+`max_error_half_ulps` (error relative to the tensor's peak magnitude).
+
+**Replay.** Re-run a finished campaign's compiled blobs, with no model calls, to
+obtain both verdicts for campaigns recorded earlier:
 
 ```bash
 .venv/bin/python scripts/replay_intel_local_npu.py RUN_ROOT/evaluation --output RUN_ROOT/npu-replay-fp16
@@ -164,14 +173,32 @@ verdicts for campaigns recorded earlier:
 The replay checks each blob against its compile-time hash and saves outputs, rows
 and `summary.json` in the new directory. It never rewrites the campaign.
 
-On `intel-npu-baseline-openai-20261013T205319939819544Z` the replay produced:
+**Rescore.** Rescore saved outputs under any tolerance, with neither the device
+nor model calls. Add `--outputs RUN_ROOT/npu-replay-fp16` for campaigns recorded
+before outputs were saved.
 
-- **Executions:** 49 attempts with no execution errors. All 49 reproduced their
-  recorded manifest case counts.
-- **Accepted tasks:** of 39, 2 met the manifest tolerance and 38 passed the FP16
-  verdict. The one FP16 failure is the matmul `cancellation` case described above.
-- **Case pass rates:** over 468 accepted-task cases, 38.7% under the manifest
-  tolerance and 99.8% under the FP16 verdict.
+```bash
+.venv/bin/python scripts/rescore_intel_npu_outputs.py RUN_ROOT/evaluation --rtol 9.765625e-4 --atol 9.765625e-4
+```
+
+**Results.** These are for accepted tasks only, 39 tasks with 468 cases. Both
+October 13–14 campaigns gave identical numbers:
+
+| Verdict | Tasks passing all cases | Case pass rate |
+| --- | ---: | ---: |
+| Manifest float32 tolerance | 2 | 38.7% |
+| FP16, `rtol 1e-3, atol 1e-5` (default; PyTorch's float16 default) | 22 | 82.9% |
+| FP16, `rtol = atol = 2⁻¹⁰` | 35 | 95.7% |
+
+**Remaining failures at `rtol = atol = 2⁻¹⁰`.** The four tasks still failing
+exceed their bound by 3–4.6×:
+
+- **`softplus`.** The NPU approximates transcendental functions.
+- **`cumsum`, `reverse_cumsum` and the HIP convolution.** Running sums reach
+  magnitudes of 10–60, so near-zero elements carry errors above unit-scale
+  resolution.
+
+Across these tasks the device flushed 4,067 subnormal reference values to zero.
 
 ## Direct OpenAI Intel baseline
 
@@ -200,8 +227,15 @@ Physical execution is observational:
 - The repair prompt never receives `target_execution`.
 - If a runner is configured, preflight requires the smoke fixture to have
   executed on the physical NPU before any model call.
-- `results/REPORT.md` adds a "Physical NPU observation" section with case pass rates
-  under both verdicts. The per-task and per-attempt CSV files add NPU status, case
-  counts, maximum absolute error and the FP16 verdict.
+- `results/REPORT.md` adds a second headline line: tasks accepted offline **and**
+  verified on the physical NPU under the FP16 verdict, out of all planned tasks.
+- Its "Physical NPU verification" section reports each rate twice. *Of planned*
+  counts tasks or cases without an accepted candidate as failures. *Of accepted*
+  covers accepted candidates only.
+- The FP16 verdict is rescored from the hash-checked saved NPU outputs, using the
+  current tolerances, every time the report is built. Regenerate it with
+  `research/run_xdna2_baseline.py report --root RUN_ROOT`.
+- The per-task and per-attempt CSV files add NPU status, case counts and both
+  verdicts.
 - Like the AMD launcher, this one has no local dollar cap. Check billing on
   OpenAI.

@@ -15,13 +15,18 @@ from .oracles import execute_oracle
 from .validation import compare_outputs, sha256
 
 FP16_UNIT_ROUNDOFF = 2.0 ** -11
-# Allowance for rounding inside an FP16 device (intermediates, accumulation, approximate transcendentals),
-# in half-ulps of each output tensor's peak magnitude. Output and input rounding are modeled exactly instead.
-FP16_TOLERANCE_HALF_ULPS = 8
-FP16_ABSOLUTE_FLOOR = 2.0 ** -24  # smallest FP16 subnormal; covers all-zero references
+FP16_MIN_NORMAL = 2.0 ** -14
+# Elementwise |npu - reference| <= atol + rtol * |reference|. Input and output rounding are modeled exactly in the
+# reference; this allows one FP16 ulp relative to each element plus one ulp at unit magnitude, which absorbs
+# subnormal flush-to-zero and cancellation residue for unit-scale data.
+# FP16_RTOL = 2.0 ** -10
+# FP16_ATOL = 2.0 ** -10
+# default pytorch fp32 atol and rtol values
+FP16_RTOL = 1e-3
+FP16_ATOL = 1e-5
 FP16_VERDICT = {'reference': 'independent oracle on FP16-rounded float inputs and scalars, result rounded to FP16',
-                'tolerance_half_ulps': FP16_TOLERANCE_HALF_ULPS, 'scale': 'peak magnitude of each output tensor',
-                'absolute_floor': FP16_ABSOLUTE_FLOOR}
+                'comparison': 'elementwise |actual - reference| <= atol + rtol * |reference|',
+                'rtol': FP16_RTOL, 'atol': FP16_ATOL}
 
 
 def encode_tensor(value: np.ndarray) -> TensorPayload:
@@ -60,7 +65,7 @@ def fp16_reference(manifest, inputs: dict) -> dict[str, np.ndarray]:
 
 
 def compare_fp16(actual: dict[str, np.ndarray], reference: dict[str, np.ndarray], tolerance: NumericTolerance,
-                 case_id: str) -> dict:
+                 case_id: str, rtol: float = FP16_RTOL, atol: float = FP16_ATOL) -> dict:
     diagnostics = {'test_id': case_id, 'correct': True, 'outputs': {}}
     if set(actual) != set(reference):
         return {'test_id': case_id, 'correct': False, 'error': 'output_names'}
@@ -75,15 +80,21 @@ def compare_fp16(actual: dict[str, np.ndarray], reference: dict[str, np.ndarray]
         peak = float(np.max(np.abs(e[finite]), initial=0.0))
         with np.errstate(invalid='ignore'):
             error = np.where(finite & np.isfinite(a), np.abs(a - e), 0.0)
-        bound = (FP16_TOLERANCE_HALF_ULPS * FP16_UNIT_ROUNDOFF * peak + FP16_ABSOLUTE_FLOOR
-                 if np.issubdtype(expected.dtype, np.floating) else 0.0)
+        floating = np.issubdtype(expected.dtype, np.floating)
+        bound = atol + rtol * np.abs(e) if floating else np.zeros_like(e)
         matches = (finite & np.isfinite(a) & (error <= bound)) | (np.isinf(e) & (a == e))
         if tolerance.equal_nan:
             matches |= np.isnan(a) & np.isnan(e)
         largest = float(np.max(error, initial=0.0))
         count = int(np.count_nonzero(~matches))
+        with np.errstate(divide='ignore', invalid='ignore'):
+            scaled = np.where(bound > 0, error / bound, np.where(error > 0, np.inf, 0.0))
+        worst = float(np.max(scaled, initial=0.0))
         diagnostics['outputs'][name] = {'correct': count == 0, 'mismatch_count': count, 'max_absolute_error': largest,
+            'max_scaled_error': worst if np.isfinite(worst) else None,
+            # Diagnostics: error relative to the tensor's peak, and FP16 subnormals the device returned as zero.
             'max_error_half_ulps': largest / (FP16_UNIT_ROUNDOFF * peak) if peak else (0.0 if largest == 0 else None),
+            'flushed_subnormals': int(np.count_nonzero(floating & (np.abs(e) < FP16_MIN_NORMAL) & (e != 0) & (a == 0))),
             'first_failing_indices': np.argwhere(~matches)[:8].tolist()}
         diagnostics['correct'] &= count == 0
     return diagnostics

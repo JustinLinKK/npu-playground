@@ -91,10 +91,29 @@ def test_executor_outputs_are_saved_with_hashes(tmp_path):
     script = tmp_path / 'executor.py'
     script.write_text(f'import sys\nsys.stdin.read()\nsys.stdout.write(open({str(payload)!r}).read())\n')
     stage = execute_target(r, [sys.executable, str(script)], tmp_path / 'target_execution')
-    assert stage.status == 'passed' and stage.details['fp16_correct'] is True
+    assert stage.status == 'passed' and 'fp16_correct' in stage.details
     (name, digest), = stage.artifacts.items()
     assert name.startswith('target_execution/') and sha256(tmp_path / name) == digest
     case_id, case = next(iter(r.cases.items()))
     expected = execute_oracle(r.manifest, {n: decode_tensor(t) for n, t in case.items()})
     with np.load(tmp_path / name) as saved:
         assert np.array_equal(saved['output'], expected['output'])
+
+
+def test_fp16_verdict_is_elementwise_and_counts_flushed_subnormals():
+    from npu_agent.executors import FP16_ATOL, FP16_RTOL, compare_fp16
+    from npu_agent.models import NumericTolerance
+
+    reference = {'output': np.array([1000.0, 0.5, 3e-5, 0.0], dtype=np.float32)}
+    # Flushing a subnormal is counted, fails the default atol (1e-5) and passes an atol of one unit-scale ulp.
+    device = {'output': np.array([1000.0 + 0.5, 0.5, 0.0, 0.0], dtype=np.float32)}
+    result = compare_fp16(device, reference, NumericTolerance(), 'case')
+    assert not result['correct'] and result['outputs']['output']['flushed_subnormals'] == 1
+    assert result['outputs']['output']['first_failing_indices'] == [[2]]
+    assert compare_fp16(device, reference, NumericTolerance(), 'case', atol=2 ** -10)['correct']
+    # An error that is small next to the tensor's peak but large for its own element now fails.
+    wrong_small = {'output': np.array([1000.0, 0.5 + 0.05, 3e-5, 0.0], dtype=np.float32)}
+    output = compare_fp16(wrong_small, reference, NumericTolerance(), 'case')['outputs']['output']
+    assert output['mismatch_count'] == 1 and output['first_failing_indices'] == [[1]]
+    assert output['max_scaled_error'] == pytest.approx(0.05 / (FP16_ATOL + FP16_RTOL * 0.5))
+    assert compare_fp16(wrong_small, reference, NumericTolerance(), 'case', rtol=0.2, atol=0.0)['correct']

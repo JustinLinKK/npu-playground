@@ -461,58 +461,88 @@ def test_intel_preflight_requires_the_runner_to_reach_the_npu(tmp_path, monkeypa
     assert json.loads((tmp_path / 'preflight.json').read_text())['status'] == 'completed'
 
 
-def test_intel_report_records_npu_observations_beside_offline_acceptance(tmp_path):
+def test_intel_report_counts_npu_verification_against_planned_and_accepted_tasks(tmp_path):
     import csv
 
-    from npu_agent.study_v4 import case_schedule
-    from npu_agent.xdna2_baseline import build_report
+    import numpy as np
 
-    names = ['cuda_reduce_sum', 'cuda_vector_add']
+    from npu_agent.executors import FP16_VERDICT, fp16_reference
+    from npu_agent.study_v4 import case_schedule
+    from npu_agent.testcases import generate_cases
+    from npu_agent.validation import sha256
+    from npu_agent.xdna2_baseline import build_report, fp16_from_outputs
+
+    names = ['cuda_reduce_sum', 'cuda_tiled_transpose', 'cuda_vector_add']
+    corpus = discover_kernels(Path('examples/classic'))
     config = intel_config(kernels=names)
     runner_target = TARGETS['intel_npu_3720'].model_copy(update={'hardware_runner': ['fake-runner']}).model_dump(mode='json')
     campaign = {'config': config.model_dump(), 'status': 'completed', 'budget_enforcement': 'openai',
                 'identity': {'targets': {'intel_npu_3720': runner_target}},
                 'cases': case_schedule(config, names, {name: name for name in names})}
     (tmp_path / 'campaign.json').write_text(json.dumps(campaign))
+    usage = {'code': {'status': 'completed', 'metadata': {'usage': {'input_tokens': 10, 'output_tokens': 5, 'total_tokens': 15}}}}
 
-    def cycle(number, host, npu, error, fp16=None):
-        details = {'comparisons': [{'test_id': 'normal-0', 'correct': npu, 'outputs': {'output': {'max_absolute_error': error}}},
-                                   {'test_id': 'zeros', 'correct': True, 'outputs': {'output': {'max_absolute_error': 0.0}}}]}
-        if fp16 is not None:
-            details.update(fp16_correct=fp16, fp16_cases_passed=2 if fp16 else 1, fp16_comparisons=[
-                {'test_id': 'normal-0', 'correct': fp16, 'outputs': {'output': {'max_error_half_ulps': 1.5 if fp16 else 900.0}}}])
-        execution = {'status': 'passed' if npu else 'failed', 'engine': 'physical_npu', 'correct': npu, 'cases_run': 2,
-                     'details': details}
-        stages = {'oracle_validation': {'status': 'passed', 'correct': True}, 'graph_construction': {'status': 'passed'},
-                  'target_compile': {'status': 'passed'}, 'target_execution': execution,
+    def cycle(kernel, number, host, manifest_passed=None, device=None, recorded_fp16=None):
+        """device: 'exact' or 'zeros' saves NPU outputs; recorded_fp16 records a verdict without outputs."""
+        run = tmp_path / 'runs' / kernel / str(number)
+        manifest = corpus[kernel][2]
+        (run / 'contract').mkdir(parents=True)
+        (run / 'contract' / 'manifest.json').write_text(manifest.model_dump_json())
+        stages = {'oracle_validation': {'status': 'passed', 'correct': True}, 'target_compile': {'status': 'passed'},
                   'host_execution': {'status': 'passed', 'correct': True} if host else
                                     {'status': 'failed', 'correct': False, 'error_category': 'numerical_mismatch'}}
-        usage = {'input_tokens': 10, 'output_tokens': 5, 'total_tokens': 15}
-        return {'number': number, 'status': 'passed' if host else 'failed', 'compile_result': {'validation': {'stages': stages}},
-                'calls': {'code': {'status': 'completed', 'metadata': {'usage': usage}}}}
+        if manifest_passed is not None:
+            tests = generate_cases(manifest)
+            artifacts, details = {}, {'comparisons': [
+                {'test_id': t.id, 'correct': i < manifest_passed, 'outputs': {'output': {'max_absolute_error': 1e-3}}}
+                for i, t in enumerate(tests)]}
+            if device:
+                (run / 'target_execution').mkdir()
+                for test in tests:
+                    reference = fp16_reference(manifest, {**test.inputs, **{x.name: x.value for x in manifest.scalars}})
+                    values = {k: (v if device == 'exact' else np.zeros_like(v)) for k, v in reference.items()}
+                    np.savez(run / 'target_execution' / f'{test.id}.npz', **values)
+                    artifacts[f'target_execution/{test.id}.npz'] = sha256(run / 'target_execution' / f'{test.id}.npz')
+            if recorded_fp16 is not None:
+                details.update(fp16_verdict=FP16_VERDICT, fp16_correct=recorded_fp16 == 12, fp16_cases_passed=recorded_fp16)
+            stages['target_execution'] = {'status': 'passed' if manifest_passed == 12 else 'failed', 'engine': 'physical_npu',
+                                          'correct': manifest_passed == 12, 'cases_run': 12, 'artifacts': artifacts, 'details': details}
+        (run / 'validation.json').write_text('{}')
+        return {'number': number, 'status': 'passed' if host else 'failed', 'calls': usage,
+                'compile_result': {'artifacts': {'validation.json': str(run / 'validation.json')}, 'validation': {'stages': stages}}}
 
-    histories = {'cuda_vector_add': [cycle(1, False, False, 0.5, False), cycle(2, True, False, 8.8e-4, True)],
-                 'cuda_reduce_sum': [cycle(1, True, True, 1e-6, True)]}
+    histories = {'cuda_vector_add': [cycle('cuda_vector_add', 1, False, 5, 'zeros'), cycle('cuda_vector_add', 2, True, 7, 'exact')],
+                 'cuda_reduce_sum': [cycle('cuda_reduce_sum', 1, True, 12, recorded_fp16=12)],
+                 'cuda_tiled_transpose': [cycle('cuda_tiled_transpose', 1, False)]}
     for case in campaign['cases']:
         folder = tmp_path / 'cases' / case['id']
         folder.mkdir(parents=True)
-        (folder / 'report.json').write_text(json.dumps({'status': 'completed', 'active_seconds': 1.0,
-                                                        'cycles': histories[case['kernel']]}))
+        status = 'failed' if case['kernel'] == 'cuda_tiled_transpose' else 'completed'
+        (folder / 'report.json').write_text(json.dumps({'status': status, 'active_seconds': 1.0, 'cycles': histories[case['kernel']]}))
     summary = build_report(tmp_path)
-    assert summary['offline_passes'] == 2
-    assert summary['physical_npu'] == {'executed_attempts': 3, 'execution_errors': 0, 'accepted_tasks_executed': 2,
-                                       'accepted_tasks_within_tolerance': 1, 'accepted_tasks_fp16_correct': 2,
-                                       'cpu_npu_agreement': {'cpu_fail/npu_fail': 1, 'cpu_pass/npu_fail': 1, 'cpu_pass/npu_pass': 1},
-                                       'accepted_case_pass_rate': {'cases_run': 4, 'manifest_tolerance': 0.75, 'fp16_verdict': 1.0}}
+    npu = summary['physical_npu']
+    assert summary['offline_passes'] == 2 and npu['fp16_verdict'] == FP16_VERDICT
+    assert npu['tasks'] == {'planned': 3, 'accepted': 2, 'accepted_and_executed': 2,
+                            'npu_verified_manifest': 1, 'npu_verified_fp16': 2}
+    assert npu['case_pass_rate']['manifest_tolerance'] == {
+        'of_planned': {'passed': 19, 'total': 36, 'rate': 19 / 36}, 'of_accepted': {'passed': 19, 'total': 24, 'rate': 19 / 24}}
+    assert npu['case_pass_rate']['fp16_verdict']['of_planned'] == {'passed': 24, 'total': 36, 'rate': 24 / 36}
+    assert npu['cpu_npu_fp16_agreement'] == {'cpu_fail/npu_fp16_fail': 1, 'cpu_pass/npu_fp16_pass': 2}
     with (tmp_path / 'results/tasks.csv').open() as stream:
         rows = {row['kernel']: row for row in csv.DictReader(stream)}
-    assert (rows['cuda_vector_add']['npu_status'], float(rows['cuda_vector_add']['npu_max_abs_err'])) == ('failed', 8.8e-4)
-    assert (rows['cuda_vector_add']['npu_fp16_correct'], float(rows['cuda_vector_add']['npu_fp16_max_half_ulps'])) == ('True', 1.5)
+    assert (rows['cuda_vector_add']['npu_fp16_cases_passed'], rows['cuda_vector_add']['npu_cases_passed']) == ('12', '7')
     report = (tmp_path / 'results/REPORT.md').read_text()
-    assert '# Intel NPU 3720 direct baseline' in report and 'OpenVINO CPU graph correctness on twelve inputs' in report
-    assert 'Physical NPU observation (did not affect acceptance)' in report and '1/2 / 2/2 (8.80e-04)' in report
-    assert '| Case pass rate, manifest tolerance | 75.0% |' in report and '| Case pass rate, FP16 verdict | 100.0% |' in report
-    assert 'The emitted physical NPU binary was not executed' not in report and '| unavailable |' in report
+    assert '**2/3 planned tasks accepted and verified on the physical NPU** (FP16 verdict, rtol 0.001, atol 1e-05)' in report
+    assert '| **Tasks NPU-verified, FP16 verdict** | 2/3 (66.7%) | 2/2 (100.0%) |' in report
+    assert '| Input cases passing on the NPU, manifest tolerance | 19/36 (52.8%) | 19/24 (79.2%) |' in report
+    assert '| 12/12 / 7/12 |' in report and '| not accepted |' in report and '| unavailable |' in report
+    assert 'OpenVINO CPU graph correctness on twelve inputs' in report
+    # Outputs that no longer match their execution-time hashes are not evidence.
+    accepted = histories['cuda_vector_add'][1]['compile_result']
+    run = Path(accepted['artifacts']['validation.json']).parent
+    assert fp16_from_outputs(accepted['validation']['stages']['target_execution'], accepted)['npu_fp16_cases_passed'] == 12
+    np.savez(run / 'target_execution' / 'zeros.npz', output=np.ones(4096, dtype=np.float32))
+    assert fp16_from_outputs(accepted['validation']['stages']['target_execution'], accepted) is None
 
 
 def test_amd_report_text_is_unchanged_without_a_runner(tmp_path):
