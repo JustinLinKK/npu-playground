@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "name": "triton_fused_attention",
+  "source_file": "kernel.py",
+  "dialect": "triton",
+  "entrypoint": "attention_kernel",
+  "tensors": [
+    {
+      "name": "query",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        1,
+        2,
+        32,
+        16
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "key",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        1,
+        2,
+        32,
+        16
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "value",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        1,
+        2,
+        32,
+        16
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float16",
+      "shape": [
+        1,
+        2,
+        32,
+        16
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    }
+  ],
+  "scalars": [],
+  "constraints": [
+    "non-causal scaled dot-product attention",
+    "scale is inverse square root of head dimension",
+    "Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and rounds the final output to FP16."
+  ],
+  "tolerance": {
+    "rtol": 0.001,
+    "atol": 1e-05,
+    "equal_nan": false
+  },
+  "seed": 0,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "attention",
+    "parameters": {
+      "scale": 0.25
+    }
+  },
+  "provenance": {
+    "repository": "https://github.com/triton-lang/triton",
+    "commit": "64c974fda6bac26ec742e3e566e65848ba53b07f",
+    "path": "python/tutorials/06-fused-attention.py",
+    "license": "MIT",
+    "precision_contract": "intel-fp16-v1"
+  },
+  "numerical_domain": "finite"
+}

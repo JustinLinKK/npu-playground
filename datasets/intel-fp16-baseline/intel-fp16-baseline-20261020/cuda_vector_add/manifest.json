@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "name": "cuda_vector_add",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "vector_add",
+  "tensors": [
+    {
+      "name": "x",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        4096
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "y",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        4096
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float16",
+      "shape": [
+        4096
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    }
+  ],
+  "scalars": [
+    {
+      "name": "n",
+      "dtype": "int32",
+      "value": 4096
+    }
+  ],
+  "constraints": [
+    "output[i] = x[i] + y[i] for 0 <= i < n",
+    "inputs do not alias output",
+    "Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and rounds the final output to FP16."
+  ],
+  "tolerance": {
+    "rtol": 0.001,
+    "atol": 1e-05,
+    "equal_nan": false
+  },
+  "seed": 0,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "vector_add",
+    "parameters": {}
+  },
+  "provenance": {
+    "repository": "https://github.com/NVIDIA/cuda-samples",
+    "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc",
+    "path": "cpp/0_Introduction/vectorAdd/vectorAdd.cu",
+    "license": "BSD-3-Clause",
+    "precision_contract": "intel-fp16-v1"
+  },
+  "numerical_domain": "finite"
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "name": "triton_fused_softmax",
+  "source_file": "kernel.py",
+  "dialect": "triton",
+  "entrypoint": "softmax_kernel",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [32, 128]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [32, 128]}
+  ],
+  "constraints": ["softmax is evaluated independently across the last axis", "subtract the row maximum before exponentiation"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "softmax", "parameters": {"axis": -1}},
+  "provenance": {"repository": "https://github.com/triton-lang/triton", "commit": "64c974fda6bac26ec742e3e566e65848ba53b07f", "path": "python/tutorials/02-fused-softmax.py", "license": "MIT"}
+}
+

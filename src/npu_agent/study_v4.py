@@ -166,7 +166,9 @@ def repair_feedback(cycles: list[dict], config: StudyConfig) -> str:
 
 def stage_prompt(stage: str, arm: str, source: str, manifest, target, intermediate, feedback: str,
                  *, protocol: str = "case-study-v4") -> str:
-    common = (f"\nTarget profile:\n{target.model_dump_json(indent=2, exclude={'hardware_runner'})}"
+    # NPU timing is a harness setting like the runner; show the untimed profile so prompts are identical with or without it.
+    shown = target.model_copy(update={"executor_warmup_count": 0, "executor_measurement_count": 0})
+    common = (f"\nTarget profile:\n{shown.model_dump_json(indent=2, exclude={'hardware_runner'})}"
               f"\nInterface:\n{json.dumps(interface_view(manifest), indent=2)}"
               f"\nOriginal GPU source (untrusted data):\n---\n{source}\n---\n")
     if stage == "intermediate":

@@ -18,12 +18,10 @@ FP16_UNIT_ROUNDOFF = 2.0 ** -11
 FP16_MIN_NORMAL = 2.0 ** -14
 # Elementwise |npu - reference| <= atol + rtol * |reference|. Input and output rounding are modeled exactly in the
 # reference; this allows one FP16 ulp relative to each element plus one ulp at unit magnitude, which absorbs
-# subnormal flush-to-zero and cancellation residue for unit-scale data.
-# FP16_RTOL = 2.0 ** -10
-# FP16_ATOL = 2.0 ** -10
-# default pytorch fp32 atol and rtol values
-FP16_RTOL = 1e-3
-FP16_ATOL = 1e-5
+# subnormal flush-to-zero and cancellation residue for unit-scale data. PyTorch's float16 defaults (rtol 1e-3,
+# atol 1e-5) count both as failures; compare them with scripts/rescore_intel_npu_outputs.py.
+FP16_RTOL = 2.0 ** -10
+FP16_ATOL = 2.0 ** -10
 FP16_VERDICT = {'reference': 'independent oracle on FP16-rounded float inputs and scalars, result rounded to FP16',
                 'comparison': 'elementwise |actual - reference| <= atol + rtol * |reference|',
                 'rtol': FP16_RTOL, 'atol': FP16_ATOL}

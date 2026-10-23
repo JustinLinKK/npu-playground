@@ -105,12 +105,12 @@ def test_fp16_verdict_is_elementwise_and_counts_flushed_subnormals():
     from npu_agent.models import NumericTolerance
 
     reference = {'output': np.array([1000.0, 0.5, 3e-5, 0.0], dtype=np.float32)}
-    # Flushing a subnormal is counted, fails the default atol (1e-5) and passes an atol of one unit-scale ulp.
+    # Flushing a subnormal is counted and passes the default atol (one unit-scale ulp), but fails PyTorch's 1e-5.
     device = {'output': np.array([1000.0 + 0.5, 0.5, 0.0, 0.0], dtype=np.float32)}
     result = compare_fp16(device, reference, NumericTolerance(), 'case')
-    assert not result['correct'] and result['outputs']['output']['flushed_subnormals'] == 1
-    assert result['outputs']['output']['first_failing_indices'] == [[2]]
-    assert compare_fp16(device, reference, NumericTolerance(), 'case', atol=2 ** -10)['correct']
+    assert result['correct'] and result['outputs']['output']['flushed_subnormals'] == 1
+    strict = compare_fp16(device, reference, NumericTolerance(), 'case', rtol=1e-3, atol=1e-5)
+    assert not strict['correct'] and strict['outputs']['output']['first_failing_indices'] == [[2]]
     # An error that is small next to the tensor's peak but large for its own element now fails.
     wrong_small = {'output': np.array([1000.0, 0.5 + 0.05, 3e-5, 0.0], dtype=np.float32)}
     output = compare_fp16(wrong_small, reference, NumericTolerance(), 'case')['outputs']['output']

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "name": "cuda_tiled_matmul",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "matrix_mul",
+  "tensors": [
+    {"name": "a", "direction": "input", "dtype": "float16", "shape": [64, 64]},
+    {"name": "b", "direction": "input", "dtype": "float16", "shape": [64, 64]},
+    {"name": "output", "direction": "output", "dtype": "float16", "shape": [64, 64]}
+  ],
+  "constraints": ["output = a multiplied by b", "products accumulate in float32 and cast to float16"],
+  "tolerance": {"rtol": 0.02, "atol": 0.02, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "matmul", "parameters": {"output_dtype": "float16"}},
+  "provenance": {"repository": "https://github.com/NVIDIA/cuda-samples", "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc", "path": "cpp/0_Introduction/matrixMul/matrixMul.cu", "license": "BSD-3-Clause"}
+}
+

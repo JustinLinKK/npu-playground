@@ -19,11 +19,35 @@ from npu_agent.validation import sha256, write_json
 from npu_agent.xdna2_baseline import classify_attempt
 from scripts.prepare_kernelbench_corpus import cuda_body
 
+FP16_CONTRACT = 'intel-fp16-v1'
+# Carried by every intel-fp16-v1 manifest; the original GPU source still declares its float32 interface.
+FP16_CONSTRAINT = ('Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source '
+                   'uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and '
+                   'rounds the final output to FP16.')
 
-def calibration_inputs(root):
-    corpus = root / 'calibration-inputs'
+
+def prepared_dataset(corpus):
+    """Identity of a prepared dataset corpus (dataset.json at its root), or None for a source corpus."""
+    path = corpus / 'dataset.json'
+    if not path.is_file():
+        return None
+    identity = json.loads(path.read_text())['identity']
+    if identity.get('precision_contract') != FP16_CONTRACT:
+        raise ValueError('unsupported dataset precision contract: ' + str(identity.get('precision_contract')))
+    return identity
+
+
+def calibration_folder(dataset):
+    return 'calibration-inputs-fp16' if dataset else 'calibration-inputs'
+
+
+def calibration_inputs(root, dataset=None):
+    """Four toy tasks; with an FP16 dataset they take its dtypes and tolerance so calibration qualifies that contract."""
+    corpus = root / calibration_folder(dataset)
     if corpus.exists():
         return corpus
+    dtype = 'float16' if dataset else 'float32'
+    precision = {'constraints': [FP16_CONSTRAINT], 'tolerance': dataset['tolerance']} if dataset else {}
     definitions = [
         ('add', [(7,), (7,)], (7,), 'vector_add', {}, 'out[i]=x[i]+b[i];'),
         ('reduce', [(17,)], (1,), 'reduce_sum', {'keepdims': True}, 'float s=0;for(int t=0;t<17;++t)s+=x[t];out[i]=s;'),
@@ -33,10 +57,10 @@ def calibration_inputs(root):
     for name, shapes, out_shape, op, params, body in definitions:
         folder = corpus / name
         folder.mkdir(parents=True)
-        tensors = [dict(name='x' if i == 0 else 'b', direction='input', dtype='float32', shape=list(s)) for i, s in enumerate(shapes)]
-        tensors.append(dict(name='out', direction='output', dtype='float32', shape=list(out_shape)))
+        tensors = [dict(name='x' if i == 0 else 'b', direction='input', dtype=dtype, shape=list(s)) for i, s in enumerate(shapes)]
+        tensors.append(dict(name='out', direction='output', dtype=dtype, shape=list(out_shape)))
         manifest = KernelManifest(name='calibration_' + name, source_file='kernel.cu', dialect='cuda', entrypoint='kernel',
-                                  tensors=tensors, seed=20261021, oracle={'operation': op, 'parameters': params})
+                                  tensors=tensors, seed=20261021, oracle={'operation': op, 'parameters': params}, **precision)
         if body is None:
             source = cuda_body(op, shapes, params, out_shape)
         else:
@@ -101,6 +125,55 @@ def check_preparation(root, source_report, revision):
             'calibration_gate_sha256': sha256(campaign / 'calibration-gate.json')}
 
 
+def check_dataset(corpus):
+    """Bind an evaluation to a prepared dataset: its listed files, the original sources it was derived from, and
+    bit-exact agreement of the pipeline's generated inputs and oracle references with the stored ones."""
+    import numpy as np
+
+    from npu_agent.oracles import execute_oracle
+    from npu_agent.testcases import generate_cases
+
+    report = json.loads((corpus / 'dataset.json').read_text())
+    identity = prepared_dataset(corpus)
+    files = {str(path.relative_to(corpus)) for path in corpus.rglob('*') if path.is_file()} - {'dataset.json'}
+    if files != set(report['artifacts']) or any(sha256(corpus / name) != digest for name, digest in report['artifacts'].items()):
+        raise ValueError('prepared dataset files are missing, unlisted or changed')
+    for relative, digest in identity['sources'].items():
+        if sha256(ROOT / 'examples' / relative) != digest:
+            raise ValueError('dataset was prepared from different original sources: ' + relative)
+    kernels = discover_kernels(corpus)
+    if sorted(kernels) != sorted(task['kernel'] for task in report['tasks']):
+        raise ValueError('dataset task inventory disagrees with its manifests')
+
+    def same(left, right):
+        return set(left) == set(right) and all(
+            left[k].dtype == right[k].dtype and left[k].shape == right[k].shape and np.array_equal(left[k], right[k], equal_nan=True)
+            for k in left)
+
+    def load(path):
+        with np.load(path, allow_pickle=False) as archive:
+            return {key: archive[key] for key in archive.files}
+
+    cases = 0
+    for task in report['tasks']:
+        _, manifest_path, manifest = kernels[task['kernel']]
+        if manifest.tolerance.model_dump(include={'rtol', 'atol'}) != identity['tolerance']:
+            raise ValueError('manifest tolerance differs from the dataset tolerance: ' + task['kernel'])
+        tests = generate_cases(manifest)
+        if [test.id for test in tests] != task['cases']:
+            raise ValueError('dataset case inventory disagrees with generated cases: ' + task['kernel'])
+        for test in tests:
+            inputs = {name: value for name, value in test.inputs.items() if isinstance(value, np.ndarray)}
+            reference = execute_oracle(manifest, {**test.inputs, **{s.name: s.value for s in manifest.scalars}})
+            if (not same(inputs, load(manifest_path.parent / 'inputs' / f'{test.id}.npz')) or
+                    not same(reference, load(manifest_path.parent / 'expected' / f'{test.id}.npz'))):
+                raise ValueError(f'pipeline inputs or references differ from the prepared dataset: {task["kernel"]} {test.id}')
+            cases += 1
+    return {'dataset': str(corpus.resolve()), 'dataset_sha256': sha256(corpus / 'dataset.json'),
+            'precision_contract': identity['precision_contract'], 'tolerance': identity['tolerance'],
+            'tasks': len(report['tasks']), 'cases': cases}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('phase', choices=('calibrate', 'evaluate', 'report'))
@@ -125,8 +198,9 @@ def main():
     StudyConfig.model_validate(config)
     if args.budget_on_openai != config['provider']['model'].startswith('gpt-'):
         parser.error('the direct OpenAI configuration requires --budget-on-openai')
+    dataset = prepared_dataset(ROOT / config['corpus'])
     if args.phase == 'calibrate':
-        config.update(corpus=str(calibration_inputs(root)), max_cycles=2)
+        config.update(corpus=str(calibration_inputs(root, dataset)), max_cycles=2)
         campaign = root / f'calibration-v{args.revision}'
     else:
         if args.source_report is None:
@@ -134,9 +208,13 @@ def main():
         calibration = json.loads((root / f'calibration-v{args.revision}' / 'campaign.json').read_text())
         if calibration['config']['provider'] != StudyConfig.model_validate(config).provider.model_dump():
             raise ValueError('provider configuration changed after calibration; use a new campaign')
+        if Path(calibration['config']['corpus']).name != calibration_folder(dataset):
+            raise ValueError('calibration precision differs from the evaluation corpus; use a fresh RUN_ROOT')
         evidence = check_preparation(root, args.source_report, args.revision)
         if len(discover_kernels(ROOT / config['corpus'])) != 40:
             raise ValueError('evaluation requires exactly forty distinct tasks')
+        if dataset:
+            evidence['dataset'] = check_dataset(ROOT / config['corpus'])
         campaign = root / 'evaluation'
         campaign.mkdir(exist_ok=True)
         write_json(campaign / 'preparation.json', evidence)

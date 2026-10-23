@@ -204,6 +204,7 @@ def test_replay_reexecutes_compiled_attempts_without_touching_the_campaign(tmp_p
         calls.append((request_.run_id, runner, output_dir))
         return StageResult(status='failed', correct=False, engine='physical_npu', cases_run=2, details={
             'cases_passed': 1, 'fp16_cases_passed': 2, 'fp16_correct': True,
+            'timing_samples_ms': [float(i + 1) for i in range(request_.measurement_count)],
             'fp16_comparisons': [{'outputs': {'output': {'max_error_half_ulps': 1.25}}}]})
 
     monkeypatch.setattr(replay, 'execute_target', execute)
@@ -213,6 +214,10 @@ def test_replay_reexecutes_compiled_attempts_without_touching_the_campaign(tmp_p
     assert (summary['accepted_tasks_manifest_correct'], summary['accepted_tasks_fp16_correct']) == (0, 1)
     assert (summary['accepted_case_pass_rate_manifest'], summary['accepted_case_pass_rate_fp16']) == (0.5, 1.0)
     assert summary['tasks'][0]['fp16_max_half_ulps'] == 1.25
+    assert summary['timing'] is None and summary['tasks'][0]['latency_p50_ms'] is None
+    # --timing re-times blobs whose campaign recorded none, without changing the saved request.
+    timed = replay.replay(evaluation.resolve(), (tmp_path / 'replay-timed').resolve(), ['runner'], timing=(3, 4))
+    assert timed['timing'] == {'warmup_runs': 3, 'timed_runs': 4} and timed['tasks'][0]['latency_p50_ms'] == 2.5
     assert before == {path: path.read_bytes() for path in evaluation.rglob('*') if path.is_file()}
     Path(task.artifacts['compiled.blob']).write_bytes(b'changed')
     with pytest.raises(ValueError, match='changed since compilation'):

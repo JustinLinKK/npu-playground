@@ -1,6 +1,7 @@
 """Re-run an Intel NPU baseline campaign's compiled blobs on the local NPU, saving outputs and both verdicts.
 
 Model-free: it replays the saved execution requests of every compiled attempt. The campaign is never rewritten.
+--timing WARMUP,MEASURE also times each blob on the NPU, including campaigns recorded without timing.
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ import os
 from pathlib import Path
 import shlex
 import sys
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
@@ -31,7 +34,8 @@ def half_ulps(stage) -> float | None:
     return max(values) if values else None
 
 
-def replay(evaluation: Path, output: Path, runner: list[str], accepted_only: bool = False) -> dict:
+def replay(evaluation: Path, output: Path, runner: list[str], accepted_only: bool = False,
+           timing: tuple[int, int] | None = None) -> dict:
     campaign = json.loads((evaluation / 'campaign.json').read_text())
     if campaign['config']['protocol'] != 'intel-npu-baseline-v1':
         raise ValueError('Intel NPU baseline campaign required')
@@ -52,8 +56,11 @@ def replay(evaluation: Path, output: Path, runner: list[str], accepted_only: boo
             if request.target.id != campaign['config']['targets'][0] or not (
                     sha256(blob) == request.artifact_sha256['compiled.blob'] == stages['target_compile']['artifacts']['compiled.blob']):
                 raise ValueError(f'compiled blob or target changed since compilation: {case["kernel"]} cycle {cycle["number"]}')
+            if timing:
+                request = request.model_copy(update={'warmup_count': timing[0], 'measurement_count': timing[1]})
             stage = execute_target(request, runner, output / case['id'] / f'cycle-{cycle["number"]}')
             recorded = stages.get('target_execution', {})
+            samples = stage.details.get('timing_samples_ms') or []
             rows.append({'kernel': case['kernel'], 'case_id': case['id'], 'cycle': cycle['number'],
                 'accepted': cycle['status'] == 'passed', 'host_correct': stages.get('host_execution', {}).get('correct'),
                 'status': stage.status, 'engine': stage.engine, 'error_category': stage.error_category,
@@ -61,12 +68,16 @@ def replay(evaluation: Path, output: Path, runner: list[str], accepted_only: boo
                 'manifest_cases_passed': stage.details.get('cases_passed'), 'manifest_correct': stage.correct,
                 'recorded_manifest_cases_passed': sum(c.get('correct') is True for c in recorded.get('details', {}).get('comparisons', [])),
                 'fp16_cases_passed': stage.details.get('fp16_cases_passed'), 'fp16_correct': stage.details.get('fp16_correct'),
-                'fp16_max_half_ulps': half_ulps(stage), 'stage': stage.model_dump(mode='json')})
+                'fp16_max_half_ulps': half_ulps(stage),
+                'latency_p50_ms': float(np.percentile(samples, 50)) if samples else None,
+                'latency_p95_ms': float(np.percentile(samples, 95)) if samples else None,
+                'stage': stage.model_dump(mode='json')})
             write_json(output / 'rows.json', rows)
     executed = [row for row in rows if row['engine'] == 'physical_npu']
     accepted = [row for row in executed if row['accepted']]
     cases = sum(row['cases_run'] for row in accepted)
     summary = {'campaign': str(evaluation), 'runner': runner, 'fp16_verdict': FP16_VERDICT,
+        'timing': {'warmup_runs': timing[0], 'timed_runs': timing[1]} if timing else None,
         'attempts_replayed': len(rows), 'execution_errors': len(rows) - len(executed),
         'reproduces_recorded_manifest_counts': sum(row['manifest_cases_passed'] == row['recorded_manifest_cases_passed'] for row in executed),
         'accepted_tasks': len(accepted),
@@ -80,7 +91,8 @@ def replay(evaluation: Path, output: Path, runner: list[str], accepted_only: boo
                             for key in sorted({f"cpu_{'pass' if row['host_correct'] else 'fail'}/npu_fp16_{'pass' if row['fp16_correct'] else 'fail'}"
                                                for row in executed})},
         'tasks': [{key: row[key] for key in ('kernel', 'cycle', 'manifest_cases_passed', 'fp16_cases_passed', 'cases_run',
-                                              'fp16_max_half_ulps')} for row in accepted]}
+                                              'fp16_max_half_ulps', 'fp16_correct', 'latency_p50_ms', 'latency_p95_ms')}
+                  for row in accepted]}
     write_json(output / 'summary.json', summary)
     return summary
 
@@ -92,12 +104,17 @@ if __name__ == '__main__':
     parser.add_argument('--runner', default=os.environ.get('NPU_AGENT_INTEL_NPU_3720_RUNNER'),
                         help='executor command; defaults to NPU_AGENT_INTEL_NPU_3720_RUNNER')
     parser.add_argument('--accepted-only', action='store_true', help='replay only each task\'s accepted attempt')
+    parser.add_argument('--timing', help='WARMUP,MEASURE NPU latency runs of each blob, e.g. 20,200 (default: as recorded)')
     args = parser.parse_args()
     if not args.runner:
         parser.error('set NPU_AGENT_INTEL_NPU_3720_RUNNER or pass --runner')
-    result = replay(args.evaluation.resolve(), args.output.resolve(), shlex.split(args.runner), args.accepted_only)
+    timing = tuple(int(value) for value in args.timing.split(',')) if args.timing else None
+    if timing is not None and (len(timing) != 2 or min(timing) < 0):
+        parser.error('--timing takes WARMUP,MEASURE non-negative counts')
+    result = replay(args.evaluation.resolve(), args.output.resolve(), shlex.split(args.runner), args.accepted_only, timing)
     for task in result['tasks']:
+        latency = f"  p50 {task['latency_p50_ms']:.3f} ms" if task['latency_p50_ms'] is not None else ''
         print(f"{task['kernel']:28s} manifest {task['manifest_cases_passed']:>2}/{task['cases_run']}  "
-              f"fp16 {task['fp16_cases_passed']:>2}/{task['cases_run']}  worst {task['fp16_max_half_ulps'] or 0:.1f} half-ulps")
-    print(json.dumps({key: value for key, value in result.items() if key not in ('tasks', 'runner', 'fp16_verdict')}, indent=2))
+              f"fp16 {task['fp16_cases_passed']:>2}/{task['cases_run']}  worst {task['fp16_max_half_ulps'] or 0:.1f} half-ulps{latency}")
+    print(json.dumps({key: value for key, value in result.items() if key not in ('tasks', 'runner', 'fp16_verdict', 'timing')}, indent=2))
     raise SystemExit(0 if result['execution_errors'] == 0 else 1)

@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "name": "hip_gamma_correction",
+  "source_file": "kernel.hip",
+  "dialect": "hip",
+  "entrypoint": "gamma_correction",
+  "tensors": [
+    {
+      "name": "input",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        3,
+        32,
+        32
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float16",
+      "shape": [
+        3,
+        32,
+        32
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    }
+  ],
+  "scalars": [
+    {
+      "name": "n",
+      "dtype": "int32",
+      "value": 3072
+    },
+    {
+      "name": "gamma",
+      "dtype": "float32",
+      "value": 2.19921875
+    }
+  ],
+  "constraints": [
+    "clamp inputs to [0,1] then raise each element to gamma",
+    "Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and rounds the final output to FP16."
+  ],
+  "tolerance": {
+    "rtol": 0.001,
+    "atol": 1e-05,
+    "equal_nan": false
+  },
+  "seed": 0,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "gamma_correction",
+    "parameters": {
+      "gamma": 2.19921875
+    }
+  },
+  "provenance": {
+    "repository": "https://github.com/ROCm/rocm-examples",
+    "commit": "c3cae692de09d497d2bdb30a1bed41c1e9327312",
+    "path": "Programming-Guide/Tutorials/Performance-Optimization/basic_image_gamma_correction/basic_image_gamma_correction.hip",
+    "license": "MIT",
+    "precision_contract": "intel-fp16-v1"
+  },
+  "numerical_domain": "finite"
+}

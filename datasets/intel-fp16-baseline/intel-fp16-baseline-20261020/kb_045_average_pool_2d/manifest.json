@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "name": "kb_045_average_pool_2d",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "kernel",
+  "tensors": [
+    {
+      "name": "x",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        1,
+        2,
+        24,
+        24
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "out",
+      "direction": "output",
+      "dtype": "float16",
+      "shape": [
+        1,
+        2,
+        2,
+        2
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    }
+  ],
+  "scalars": [],
+  "constraints": [
+    "Static contiguous row-major tensors; preserve the source mathematics.",
+    "Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and rounds the final output to FP16."
+  ],
+  "tolerance": {
+    "rtol": 0.001,
+    "atol": 1e-05,
+    "equal_nan": false
+  },
+  "seed": 20261046,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "kb_pool",
+    "parameters": {
+      "kind": "average",
+      "kernel": 11,
+      "stride": 11,
+      "padding": 0,
+      "dilation": 1
+    }
+  },
+  "provenance": {
+    "repository": "https://github.com/ScalingIntelligence/KernelBench",
+    "commit": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+    "upstream_file": "45_Average_Pooling_2D.py",
+    "upstream_url": "https://raw.githubusercontent.com/ScalingIntelligence/KernelBench/423217d9fda91e0c2d67e4a43bf62f96f6d104f1/KernelBench/level1/45_Average_Pooling_2D.py",
+    "upstream_sha256": "3abae4a4776630cc55e066f3878c268e9338b4a936d50a38d8bd62d3bdefe1ba",
+    "upstream_init": "[11, 11, 0]",
+    "license": "MIT",
+    "adaptation": "float32 CUDA; reduced static shapes; scalar result reshaped to [1]; operator defaults preserved",
+    "precision_contract": "intel-fp16-v1"
+  },
+  "numerical_domain": "finite"
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "name": "cuda_vector_add",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "vector_add",
+  "tensors": [
+    {"name": "x", "direction": "input", "dtype": "float32", "shape": [4096]},
+    {"name": "y", "direction": "input", "dtype": "float32", "shape": [4096]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [4096]}
+  ],
+  "scalars": [{"name": "n", "dtype": "int32", "value": 4096}],
+  "constraints": ["output[i] = x[i] + y[i] for 0 <= i < n", "inputs do not alias output"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "vector_add", "parameters": {}},
+  "provenance": {"repository": "https://github.com/NVIDIA/cuda-samples", "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc", "path": "cpp/0_Introduction/vectorAdd/vectorAdd.cu", "license": "BSD-3-Clause"}
+}
+

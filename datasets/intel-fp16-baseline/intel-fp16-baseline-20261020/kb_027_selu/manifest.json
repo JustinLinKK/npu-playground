@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "name": "kb_027_selu",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "kernel",
+  "tensors": [
+    {
+      "name": "x",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        4,
+        65
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "out",
+      "direction": "output",
+      "dtype": "float16",
+      "shape": [
+        4,
+        65
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    }
+  ],
+  "scalars": [],
+  "constraints": [
+    "Static contiguous row-major tensors; preserve the source mathematics.",
+    "Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and rounds the final output to FP16."
+  ],
+  "tolerance": {
+    "rtol": 0.001,
+    "atol": 1e-05,
+    "equal_nan": false
+  },
+  "seed": 20261028,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "kb_activation",
+    "parameters": {
+      "kind": "selu"
+    }
+  },
+  "provenance": {
+    "repository": "https://github.com/ScalingIntelligence/KernelBench",
+    "commit": "423217d9fda91e0c2d67e4a43bf62f96f6d104f1",
+    "upstream_file": "27_SELU_.py",
+    "upstream_url": "https://raw.githubusercontent.com/ScalingIntelligence/KernelBench/423217d9fda91e0c2d67e4a43bf62f96f6d104f1/KernelBench/level1/27_SELU_.py",
+    "upstream_sha256": "21aad8c91144bee2c507d134ffc9c365d555a6035dfea71e3044a9cdad8adf99",
+    "upstream_init": "[]",
+    "license": "MIT",
+    "adaptation": "float32 CUDA; reduced static shapes; scalar result reshaped to [1]; operator defaults preserved",
+    "precision_contract": "intel-fp16-v1"
+  },
+  "numerical_domain": "finite"
+}

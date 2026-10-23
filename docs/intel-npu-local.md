@@ -74,7 +74,8 @@ export NPU_AGENT_INTEL_NPU_3720_RUNNER="$PWD/.venv/bin/python $PWD/scripts/wsl_n
   stays blocked (exit 3).
 - **Timing.** `NPU_AGENT_<TARGET_ID>_TIMING="warmup,measure"` requests timing
   samples, measured with `perf_counter` around synchronous inference of the first
-  case. Without it, runs check correctness only.
+  case. Without it, runs check correctness only. The Intel baseline launcher sets
+  `1000,200` unless the variable is already set.
 - **Fingerprints.** The runner is excluded from the toolchain fingerprint but
   included in campaign identity. Keep the same value for a campaign and all of its
   resumes.
@@ -136,9 +137,9 @@ The supervisor records two verdicts:
   model what an exact FP16 device returns: round every float input and float
   scalar to FP16, evaluate the independent oracle on those values, and round the
   result to FP16. Each element must satisfy
-  `|npu − reference| ≤ atol + rtol·|reference|` with `rtol = 1e-3, atol = 1e-5`.
-  These are PyTorch's float16 defaults (`torch.testing.assert_close`). They are
-  set in `src/npu_agent/executors.py`, and the baseline pipeline uses them
+  `|npu − reference| ≤ atol + rtol·|reference|` with `rtol = atol = 2⁻¹⁰`
+  (9.765625e-4), one FP16 ulp at magnitude 1. They are set in
+  `src/npu_agent/executors.py`, and the baseline pipeline uses them
   automatically.
 
 **Why model both roundings.** The device really does receive FP16 inputs. If
@@ -150,15 +151,16 @@ error.
 
 **What the tolerances imply.**
 
-- `rtol = 1e-3` allows about one FP16 ulp relative to each element.
-- `atol = 1e-5` is below FP16's resolution at unit magnitude, so two device
-  effects count as failures:
+- `rtol = 2⁻¹⁰` allows one FP16 ulp relative to each element.
+- `atol = 2⁻¹⁰` is one FP16 ulp at unit magnitude. It absorbs two device effects
+  that PyTorch's float16 defaults (`rtol = 1e-3, atol = 1e-5`, from
+  `torch.testing.assert_close`) count as failures, because 1e-5 is below FP16's
+  resolution at unit magnitude:
   - **Subnormal flush-to-zero.** The NPU returns FP16 subnormals (below 6.1e-5)
     as exactly 0. Each comparison counts these in `flushed_subnormals`.
   - **Cancellation residue.** Elements that land near zero because large terms
     cancel keep an absolute error at the resolution of those terms.
-- `rtol = atol = 2⁻¹⁰` (one FP16 ulp at magnitude 1) absorbs both effects. Use the
-  rescore command below to compare settings.
+- Use the rescore command below to compare settings.
 
 Each comparison also records `max_scaled_error` (error divided by its bound) and
 `max_error_half_ulps` (error relative to the tensor's peak magnitude).
@@ -171,14 +173,17 @@ obtain both verdicts for campaigns recorded earlier:
 ```
 
 The replay checks each blob against its compile-time hash and saves outputs, rows
-and `summary.json` in the new directory. It never rewrites the campaign.
+and `summary.json` in the new directory. It never rewrites the campaign. Add
+`--timing 1000,200` to also time each blob, including blobs from campaigns recorded
+without timing; `--accepted-only` limits it to each task's accepted attempt.
 
 **Rescore.** Rescore saved outputs under any tolerance, with neither the device
-nor model calls. Add `--outputs RUN_ROOT/npu-replay-fp16` for campaigns recorded
-before outputs were saved.
+nor model calls, for example PyTorch's float16 defaults. Add
+`--outputs RUN_ROOT/npu-replay-fp16` for campaigns recorded before outputs were
+saved.
 
 ```bash
-.venv/bin/python scripts/rescore_intel_npu_outputs.py RUN_ROOT/evaluation --rtol 9.765625e-4 --atol 9.765625e-4
+.venv/bin/python scripts/rescore_intel_npu_outputs.py RUN_ROOT/evaluation --rtol 1e-3 --atol 1e-5
 ```
 
 **Results.** These are for accepted tasks only, 39 tasks with 468 cases. Both
@@ -187,8 +192,8 @@ October 13–14 campaigns gave identical numbers:
 | Verdict | Tasks passing all cases | Case pass rate |
 | --- | ---: | ---: |
 | Manifest float32 tolerance | 2 | 38.7% |
-| FP16, `rtol 1e-3, atol 1e-5` (default; PyTorch's float16 default) | 22 | 82.9% |
-| FP16, `rtol = atol = 2⁻¹⁰` | 35 | 95.7% |
+| FP16, `rtol 1e-3, atol 1e-5` (PyTorch's float16 default) | 22 | 82.9% |
+| FP16, `rtol = atol = 2⁻¹⁰` (default) | 35 | 95.7% |
 
 **Remaining failures at `rtol = atol = 2⁻¹⁰`.** The four tasks still failing
 exceed their bound by 3–4.6×:
@@ -237,5 +242,50 @@ Physical execution is observational:
   `research/run_xdna2_baseline.py report --root RUN_ROOT`.
 - The per-task and per-attempt CSV files add NPU status, case counts and both
   verdicts.
+- **Performance.** The launcher sets `NPU_AGENT_INTEL_NPU_3720_TIMING=1000,200`
+  unless it is already set. Each compiled blob then runs 1000 warmup and 200 timed
+  synchronous inferences of its first input case on the NPU. The warmup is long
+  because each executor process starts the NPU in a low-power state: with 20
+  warmups, the October 21 FP16 campaign's median p50 was about twice its
+  steady-state value (about 0.4 ms instead of 0.2 ms). Each sample covers
+  host-side input and output copies, dispatch and device execution. It excludes
+  process start, blob import and the WSL bridge. The "Physical NPU performance"
+  section of `results/REPORT.md` lists p50, p95 and minimum latency per accepted
+  task, with the median p50 over FP16-verified tasks. The CSV files add
+  `npu_latency_*` columns. The setting is part of the campaign identity, so resume
+  with the same value. Prompts are identical with or without timing.
 - Like the AMD launcher, this one has no local dollar cap. Check billing on
   OpenAI.
+
+## FP16 dataset baseline
+
+`configs/intel-npu-fp16-baseline-openai.json` is the same campaign with its
+corpus set to the prepared `intel-fp16-v1` dataset in
+`datasets/intel-fp16-baseline/intel-fp16-baseline-20261020`: forty tasks with
+FP16 tensors, `rtol=1e-3, atol=1e-5`, and twelve stored input/reference pairs
+each. The dataset lives outside `examples/` because the other baselines use
+`examples` as their corpus and reject duplicate kernel names.
+
+```bash
+export NPU_AGENT_INTEL_NPU_3720_RUNNER="..."
+LC_ALL=C.utf8 bash scripts/run_intel_npu_fp16_baseline_openai.sh             # prints RUN_ROOT
+LC_ALL=C.utf8 bash scripts/run_intel_npu_fp16_baseline_openai.sh RUN_ROOT    # resume
+```
+
+The wrapper sets `INTEL_NPU_BASELINE_CONFIG` for the standard launcher. With a
+dataset corpus the runner also:
+
+- **Calibrates in FP16.** The four calibration tasks use float16 tensors and the
+  dataset tolerance (`RUN_ROOT/calibration-inputs-fp16`). Evaluation refuses a
+  calibration of the other precision, so use a fresh `RUN_ROOT`.
+- **Verifies the dataset before evaluation.** It checks every file hash listed in
+  `dataset.json` and the original `examples/` sources the dataset was derived
+  from. It also checks that the pipeline's generated inputs and oracle references
+  equal the stored `inputs/` and `expected/` tensors bit for bit. The result is
+  recorded under `dataset` in `evaluation/preparation.json`.
+
+The oracle evaluates float16 inputs with float32 or higher intermediates and
+rounds once to the output dtype, as the dataset contract states. Float32 corpora
+are unaffected. For FP16 inputs the manifest verdict and the FP16 verdict use the
+same reference and tolerance; the manifest verdict also requires FP16 output
+tensors.

@@ -122,7 +122,8 @@ def npu_observation(cycle: dict | None) -> dict:
     stage = (compiled.get("validation") or {}).get("stages", {}).get("target_execution")
     empty = {"npu_correct": None, "npu_max_abs_err": None, "npu_cases_run": 0, "npu_cases_passed": None,
              "npu_fp16_correct": None, "npu_fp16_cases_passed": None, "npu_fp16_max_scaled_error": None,
-             "npu_flushed_subnormals": None}
+             "npu_flushed_subnormals": None, "npu_timed_runs": 0, "npu_latency_p50_ms": None,
+             "npu_latency_p95_ms": None, "npu_latency_min_ms": None}
     if not stage or stage.get("status") in ("blocked", "not_requested"):
         return {"npu_status": "not_run", **empty}
     details = stage.get("details", {})
@@ -133,6 +134,13 @@ def npu_observation(cycle: dict | None) -> dict:
            "npu_correct": stage.get("correct"), "npu_max_abs_err": max(errors) if errors else None,
            "npu_cases_run": stage.get("cases_run", 0),
            "npu_cases_passed": sum(c.get("correct") is True for c in details.get("comparisons", [])) if errors else None}
+    # Latency is recorded whatever the verdict; the report decides which rows it describes.
+    samples = details.get("timing_samples_ms") or [] if physical else []
+    if samples:
+        import numpy as np
+
+        row.update(npu_timed_runs=len(samples), npu_latency_p50_ms=float(np.percentile(samples, 50)),
+                   npu_latency_p95_ms=float(np.percentile(samples, 95)), npu_latency_min_ms=float(min(samples)))
     # Prefer rescoring the saved outputs with today's tolerances; accept a recorded verdict only if it used them.
     fp16 = fp16_from_outputs(stage, compiled) if physical else None
     if fp16 is None and physical and details.get("fp16_verdict") == FP16_VERDICT:
@@ -145,9 +153,10 @@ def npu_headline(summary: dict, planned: int) -> str:
     verdict = summary['physical_npu']['fp16_verdict']
     if tasks['npu_verified_fp16'] is None:
         return f'Physical NPU: the FP16 verdict was not recorded; {tasks["npu_verified_manifest"]}/{planned} accepted tasks passed the manifest tolerance.'
+    tolerance = 'FP16 dataset manifest tolerance' if summary.get('precision_contract') else 'float32 manifest tolerance'
     return (f'**{tasks["npu_verified_fp16"]}/{planned} planned tasks accepted and verified on the physical NPU** '
             f'(FP16 verdict, rtol {verdict["rtol"]:g}, atol {verdict["atol"]:g}); '
-            f'{tasks["npu_verified_manifest"]}/{planned} also meet the float32 manifest tolerance on the NPU.')
+            f'{tasks["npu_verified_manifest"]}/{planned} also meet the {tolerance} on the NPU.')
 
 
 def build_report(root):
@@ -158,6 +167,7 @@ def build_report(root):
 
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    import numpy as np
 
     from .study_v4 import StudyConfig
     from .study_v4_reporting import case_metrics
@@ -170,6 +180,9 @@ def build_report(root):
     label = TARGET_LABELS.get(target, target)
     # Physical-NPU columns exist only for campaigns frozen with a configured hardware runner.
     observed = bool(campaign.get('identity', {}).get('targets', {}).get(target, {}).get('hardware_runner'))
+    # A prepared dataset corpus (e.g. intel-fp16-v1) supplies FP16 inputs, references and tolerance.
+    dataset = root / 'frozen' / 'corpus' / 'dataset.json'
+    precision = json.loads(dataset.read_text())['identity']['precision_contract'] if dataset.is_file() else None
     cases, attempts = [], []
     for case in campaign['cases']:
         path = root / 'cases' / case['id'] / 'report.json'
@@ -213,7 +226,7 @@ def build_report(root):
     external_budget = campaign.get('budget_enforcement') in ('openrouter', 'openai')
     ledger_path = root.parent / 'budget.json'
     ledger = json.loads(ledger_path.read_text()) if not external_budget and ledger_path.exists() else {}
-    summary = {'protocol': config.protocol, 'status': campaign['status'], 'planned': len(cases),
+    summary = {'protocol': config.protocol, 'status': campaign['status'], 'planned': len(cases), 'precision_contract': precision,
                'budget_enforcement': campaign.get('budget_enforcement', 'local'),
                'blocker': campaign.get('blocker'),
                'attempted_tasks': sum(row['cycles'] > 0 for row in cases),
@@ -257,6 +270,16 @@ def build_report(root):
                                               for a in executed)),
             'cpu_npu_fp16_agreement': dict(Counter(f"cpu_{'pass' if a['host_correct'] else 'fail'}/npu_fp16_{'pass' if a['npu_fp16_correct'] else 'fail'}"
                                                    for a in executed)) if fp16_known else None}
+        # Timing settings are frozen with the runner in the campaign identity (NPU_AGENT_<TARGET>_TIMING).
+        profile = campaign['identity']['targets'][target]
+        timed = [row for row in measured if row['npu_latency_p50_ms'] is not None]
+        verified = sorted(row['npu_latency_p50_ms'] for row in timed if row['npu_fp16_correct'] is True)
+        summary['physical_npu']['performance'] = {
+            'warmup_runs': profile.get('executor_warmup_count', 0), 'timed_runs': profile.get('executor_measurement_count', 0),
+            'accepted_tasks_timed': len(timed), 'fp16_verified_tasks_timed': len(verified),
+            'median_p50_ms_fp16_verified': float(np.median(verified)) if verified else None,
+            'tasks': {row['kernel']: {key: row[key] for key in ('npu_fp16_correct', 'npu_latency_p50_ms', 'npu_latency_p95_ms',
+                                                                 'npu_latency_min_ms', 'npu_timed_runs')} for row in timed}}
     write_json(root / 'summary.json', summary)
     write_json(directory / 'summary.json', summary)
     figure, axes = plt.subplots(2, 2, figsize=(13, 9))
@@ -316,6 +339,8 @@ def build_report(root):
              'Acceptance means target compilation plus independent ' +
              ('host/dataflow correctness' if target.startswith('amd_') else 'OpenVINO CPU graph correctness') +
              ' on twelve inputs. ' +
+             (f'Inputs, references and tolerance come from the prepared {precision} dataset; the original GPU sources '
+              'still declare their float32 interfaces. ' if precision else '') +
              ('Every compiled attempt was also executed on the physical NPU without affecting acceptance; see Physical NPU verification. '
               if observed else 'The emitted physical NPU binary was not executed; NPU performance is unmeasured. ') +
              'KernelBench inputs are CUDA adaptations with reduced shapes, not original performance workloads. '
@@ -347,12 +372,16 @@ def build_report(root):
 
         lines += ['## Physical NPU verification', '',
                   '**How to read this section.** Acceptance above is decided offline: target compilation plus independent '
-                  'OpenVINO CPU float32 correctness. It drives the repair loop and is unchanged by the NPU. Every compiled '
+                  f'OpenVINO CPU {"FP16-contract" if precision else "float32"} correctness. It drives the repair loop and is unchanged by the NPU. Every compiled '
                   'attempt also ran its exact exported blob on the physical NPU. A task is **NPU-verified** when it was '
                   'accepted and its accepted candidate passes on the NPU. "Of planned" counts tasks or cases without an '
                   'accepted candidate as failures; "of accepted" covers accepted candidates only.', '',
-                  '**Two NPU verdicts.** The *manifest* verdict reuses the float32 tolerance; the NPU computes in FP16, so '
-                  'it is expected to fail on most inputs. The *FP16* verdict compares the NPU with the independent oracle '
+                  ('**Two NPU verdicts.** The *manifest* verdict uses the dataset\'s FP16 references and tolerance and also '
+                   'requires FP16 output tensors; for FP16 inputs the *FP16* verdict uses the same reference. '
+                   if precision else
+                   '**Two NPU verdicts.** The *manifest* verdict reuses the float32 tolerance; the NPU computes in FP16, so '
+                   'it is expected to fail on most inputs. ') +
+                  'The *FP16* verdict compares the NPU with the independent oracle '
                   'evaluated on FP16-rounded inputs, with its result rounded to FP16, elementwise as '
                   f"|NPU − reference| ≤ {verdict['atol']:g} + {verdict['rtol']:g}·|reference|. "
                   'It is rescored from the saved NPU outputs whenever this report is built.', '',
@@ -374,6 +403,29 @@ def build_report(root):
             lines.append(f'| Executed attempts: CPU {cpu.split("_")[-1]}, NPU {device.split("_")[-1]}'
                          f'{" (FP16)" if npu["cpu_npu_fp16_agreement"] else " (manifest)"} | {count} |')
         lines.append('')
+        performance = npu['performance']
+        lines += ['## Physical NPU performance', '']
+        if not performance['timed_runs']:
+            lines += ['NPU latency was not measured: the campaign was frozen without '
+                      f'`NPU_AGENT_{target.upper()}_TIMING`.', '']
+        else:
+            median = performance['median_p50_ms_fp16_verified']
+            lines += [f'Each compiled blob ran {performance["warmup_runs"]} warmup and {performance["timed_runs"]} timed '
+                      'synchronous `InferRequest.infer` calls on its first input case, each timed with `perf_counter` '
+                      'inside the executor process. A sample covers host-side input and output copies, dispatch and '
+                      'device execution; it excludes process start, blob import and the WSL bridge. '
+                      'Shapes are the reduced test shapes, so fixed dispatch overhead dominates small kernels. Latency '
+                      'describes a correct kernel only when the FP16 verdict passes; other accepted tasks are listed for '
+                      'completeness.', '',
+                      f'**{performance["accepted_tasks_timed"]}/{tasks["accepted"]} accepted tasks timed; median p50 over '
+                      f'the {performance["fp16_verified_tasks_timed"]} FP16-verified tasks: '
+                      f'{"n/a" if median is None else f"{median:.3f} ms"}.**', '',
+                      '| Task | FP16 verdict | p50 (ms) | p95 (ms) | min (ms) |', '| --- | --- | ---: | ---: | ---: |']
+            for kernel, row in sorted(performance['tasks'].items(), key=lambda item: item[1]['npu_latency_p50_ms']):
+                verdict_label = {True: 'pass', False: 'fail'}.get(row['npu_fp16_correct'], 'n/a')
+                lines.append(f'| {kernel} | {verdict_label} | {row["npu_latency_p50_ms"]:.3f} | '
+                             f'{row["npu_latency_p95_ms"]:.3f} | {row["npu_latency_min_ms"]:.3f} |')
+            lines.append('')
     lines += ['## All tasks', '', '| Task | Status | Attempts | Tokens | Cost | ' +
               ('NPU cases passed: FP16 / manifest | ' if observed else '') +
               'Evidence |', '| --- | --- | ---: | ---: | ---: | ' + ('--- | ' if observed else '') + '--- |']

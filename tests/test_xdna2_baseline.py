@@ -371,6 +371,9 @@ def test_intel_baseline_prompt_is_the_unguided_openvino_contract():
     assert prompt == stage_prompt(*args)
     assert 'Return exactly model.py' in prompt and 'Container invocation and submission contract' not in prompt
     assert 'secret-runner-path' not in prompt and '"hardware": "3720"' in prompt
+    # NPU timing is a harness setting: enabling it must not change what the model sees.
+    timed = target.model_copy(update={'executor_warmup_count': 20, 'executor_measurement_count': 200})
+    assert stage_prompt('code', 'direct', source.read_text(), manifest, timed, None, '', protocol='intel-npu-baseline-v1') == prompt
 
 
 @pytest.mark.parametrize('stages,status,category', [
@@ -466,7 +469,7 @@ def test_intel_report_counts_npu_verification_against_planned_and_accepted_tasks
 
     import numpy as np
 
-    from npu_agent.executors import FP16_VERDICT, fp16_reference
+    from npu_agent.executors import FP16_ATOL, FP16_RTOL, FP16_VERDICT, fp16_reference
     from npu_agent.study_v4 import case_schedule
     from npu_agent.testcases import generate_cases
     from npu_agent.validation import sha256
@@ -475,14 +478,15 @@ def test_intel_report_counts_npu_verification_against_planned_and_accepted_tasks
     names = ['cuda_reduce_sum', 'cuda_tiled_transpose', 'cuda_vector_add']
     corpus = discover_kernels(Path('examples/classic'))
     config = intel_config(kernels=names)
-    runner_target = TARGETS['intel_npu_3720'].model_copy(update={'hardware_runner': ['fake-runner']}).model_dump(mode='json')
+    runner_target = TARGETS['intel_npu_3720'].model_copy(update={
+        'hardware_runner': ['fake-runner'], 'executor_warmup_count': 2, 'executor_measurement_count': 4}).model_dump(mode='json')
     campaign = {'config': config.model_dump(), 'status': 'completed', 'budget_enforcement': 'openai',
                 'identity': {'targets': {'intel_npu_3720': runner_target}},
                 'cases': case_schedule(config, names, {name: name for name in names})}
     (tmp_path / 'campaign.json').write_text(json.dumps(campaign))
     usage = {'code': {'status': 'completed', 'metadata': {'usage': {'input_tokens': 10, 'output_tokens': 5, 'total_tokens': 15}}}}
 
-    def cycle(kernel, number, host, manifest_passed=None, device=None, recorded_fp16=None):
+    def cycle(kernel, number, host, manifest_passed=None, device=None, recorded_fp16=None, samples=()):
         """device: 'exact' or 'zeros' saves NPU outputs; recorded_fp16 records a verdict without outputs."""
         run = tmp_path / 'runs' / kernel / str(number)
         manifest = corpus[kernel][2]
@@ -505,13 +509,15 @@ def test_intel_report_counts_npu_verification_against_planned_and_accepted_tasks
                     artifacts[f'target_execution/{test.id}.npz'] = sha256(run / 'target_execution' / f'{test.id}.npz')
             if recorded_fp16 is not None:
                 details.update(fp16_verdict=FP16_VERDICT, fp16_correct=recorded_fp16 == 12, fp16_cases_passed=recorded_fp16)
+            details['timing_samples_ms'] = list(samples)
             stages['target_execution'] = {'status': 'passed' if manifest_passed == 12 else 'failed', 'engine': 'physical_npu',
                                           'correct': manifest_passed == 12, 'cases_run': 12, 'artifacts': artifacts, 'details': details}
         (run / 'validation.json').write_text('{}')
         return {'number': number, 'status': 'passed' if host else 'failed', 'calls': usage,
                 'compile_result': {'artifacts': {'validation.json': str(run / 'validation.json')}, 'validation': {'stages': stages}}}
 
-    histories = {'cuda_vector_add': [cycle('cuda_vector_add', 1, False, 5, 'zeros'), cycle('cuda_vector_add', 2, True, 7, 'exact')],
+    histories = {'cuda_vector_add': [cycle('cuda_vector_add', 1, False, 5, 'zeros', samples=[9., 9., 9., 9.]),
+                                     cycle('cuda_vector_add', 2, True, 7, 'exact', samples=[0.4, 0.2, 0.3, 1.0])],
                  'cuda_reduce_sum': [cycle('cuda_reduce_sum', 1, True, 12, recorded_fp16=12)],
                  'cuda_tiled_transpose': [cycle('cuda_tiled_transpose', 1, False)]}
     for case in campaign['cases']:
@@ -528,11 +534,21 @@ def test_intel_report_counts_npu_verification_against_planned_and_accepted_tasks
         'of_planned': {'passed': 19, 'total': 36, 'rate': 19 / 36}, 'of_accepted': {'passed': 19, 'total': 24, 'rate': 19 / 24}}
     assert npu['case_pass_rate']['fp16_verdict']['of_planned'] == {'passed': 24, 'total': 36, 'rate': 24 / 36}
     assert npu['cpu_npu_fp16_agreement'] == {'cpu_fail/npu_fp16_fail': 1, 'cpu_pass/npu_fp16_pass': 2}
+    # Only the accepted attempt's samples describe the task; reduce_sum recorded none.
+    performance = npu['performance']
+    assert (performance['warmup_runs'], performance['timed_runs'], performance['accepted_tasks_timed']) == (2, 4, 1)
+    assert performance['median_p50_ms_fp16_verified'] == pytest.approx(0.35)
+    assert performance['tasks']['cuda_vector_add']['npu_latency_min_ms'] == 0.2 and 'cuda_reduce_sum' not in performance['tasks']
     with (tmp_path / 'results/tasks.csv').open() as stream:
         rows = {row['kernel']: row for row in csv.DictReader(stream)}
     assert (rows['cuda_vector_add']['npu_fp16_cases_passed'], rows['cuda_vector_add']['npu_cases_passed']) == ('12', '7')
+    assert rows['cuda_vector_add']['npu_latency_p50_ms'] == '0.35' and rows['cuda_reduce_sum']['npu_latency_p50_ms'] == ''
     report = (tmp_path / 'results/REPORT.md').read_text()
-    assert '**2/3 planned tasks accepted and verified on the physical NPU** (FP16 verdict, rtol 0.001, atol 1e-05)' in report
+    assert (f'**2/3 planned tasks accepted and verified on the physical NPU** (FP16 verdict, rtol {FP16_RTOL:g}, '
+            f'atol {FP16_ATOL:g})') in report
+    assert 'Each compiled blob ran 2 warmup and 4 timed' in report
+    assert '**1/2 accepted tasks timed; median p50 over the 1 FP16-verified tasks: 0.350 ms.**' in report
+    assert '| cuda_vector_add | pass | 0.350 | 0.910 | 0.200 |' in report
     assert '| **Tasks NPU-verified, FP16 verdict** | 2/3 (66.7%) | 2/2 (100.0%) |' in report
     assert '| Input cases passing on the NPU, manifest tolerance | 19/36 (52.8%) | 19/24 (79.2%) |' in report
     assert '| 12/12 / 7/12 |' in report and '| not accepted |' in report and '| unavailable |' in report
@@ -558,3 +574,128 @@ def test_amd_report_text_is_unchanged_without_a_runner(tmp_path):
     assert report.startswith('# XDNA2 direct baseline') and 'Physical NPU observation' not in report
     assert ('independent host/dataflow correctness on twelve inputs. The emitted physical NPU binary was not executed; '
             'NPU performance is unmeasured.') in report
+
+
+FP16_DATASET = Path('datasets/intel-fp16-baseline/intel-fp16-baseline-20261020')
+
+
+def test_fp16_dataset_matches_pipeline_inputs_and_references():
+    from research.run_xdna2_baseline import FP16_CONSTRAINT, check_dataset
+
+    evidence = check_dataset(FP16_DATASET)
+    assert (evidence['precision_contract'], evidence['tasks'], evidence['cases']) == ('intel-fp16-v1', 40, 480)
+    assert evidence['tolerance'] == {'rtol': 1e-3, 'atol': 1e-5}
+    for _, _, manifest in discover_kernels(FP16_DATASET).values():
+        assert FP16_CONSTRAINT in manifest.constraints
+        assert all(t.dtype == 'float16' for t in manifest.tensors if t.dtype.startswith('float'))
+
+
+def test_fp16_dataset_rejects_changed_or_divergent_tensors(tmp_path):
+    import shutil
+
+    import numpy as np
+
+    from research.run_xdna2_baseline import check_dataset
+    from npu_agent.validation import sha256
+
+    corpus = tmp_path / FP16_DATASET.name
+    shutil.copytree(FP16_DATASET, corpus)
+    expected = corpus / 'kb_005_scalar_mul' / 'expected' / 'mixed.npz'
+    with np.load(expected, allow_pickle=False) as archive:
+        values = {key: archive[key] for key in archive.files}
+    values['out'] = np.nextafter(values['out'], np.float16(np.inf))
+    np.savez(expected, **values)
+    with pytest.raises(ValueError, match='files are missing, unlisted or changed'):
+        check_dataset(corpus)
+    # A consistently re-hashed but different reference is still rejected.
+    report = json.loads((corpus / 'dataset.json').read_text())
+    report['artifacts']['kb_005_scalar_mul/expected/mixed.npz'] = sha256(expected)
+    (corpus / 'dataset.json').write_text(json.dumps(report))
+    with pytest.raises(ValueError, match='differ from the prepared dataset: kb_005_scalar_mul mixed'):
+        check_dataset(corpus)
+
+
+def test_fp16_oracle_uses_float32_intermediates():
+    import numpy as np
+
+    from npu_agent.oracles import execute_oracle
+    from npu_agent.testcases import generate_cases
+
+    manifest = discover_kernels(FP16_DATASET)['kb_005_scalar_mul'][2]
+    x = generate_cases(manifest)[0].inputs['x']
+    actual = execute_oracle(manifest, {'x': x})['out']
+    assert actual.dtype == np.float16
+    assert np.array_equal(actual, (x.astype(np.float32) * 3.14).astype(np.float16))
+    # NumPy float16 arithmetic would round the scale to 3.140625 and differ.
+    assert not np.array_equal(actual, x * 3.14)
+
+
+def test_fp16_calibration_and_config_follow_the_dataset(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from research import run_xdna2_baseline as launcher
+    from npu_agent.oracles import execute_oracle
+    from npu_agent.testcases import generate_cases
+
+    fp16 = json.loads(Path('configs/intel-npu-fp16-baseline-openai.json').read_text())
+    fp32 = json.loads(Path('configs/intel-npu-baseline-openai.json').read_text())
+    assert fp16 == fp32 | {'corpus': str(FP16_DATASET)} and len(discover_kernels(Path(fp16['corpus']))) == 40
+    corpus = discover_kernels(launcher.calibration_inputs(tmp_path, launcher.prepared_dataset(FP16_DATASET)))
+    assert len(corpus) == 4
+    for _, _, manifest in corpus.values():
+        assert {t.dtype for t in manifest.tensors} == {'float16'} and manifest.constraints == [launcher.FP16_CONSTRAINT]
+        assert (manifest.tolerance.rtol, manifest.tolerance.atol) == (1e-3, 1e-5)
+        out = next(t for t in manifest.tensors if t.direction == 'output')
+        for case in generate_cases(manifest):
+            assert execute_oracle(manifest, case.inputs)[out.name].dtype == np.float16
+    monkeypatch.setattr(launcher.subprocess, 'run', lambda *a, **kw: SimpleNamespace(returncode=0))
+    monkeypatch.setattr(launcher, 'calibration_gate', lambda *a: {'status': 'passed'})
+    monkeypatch.setattr(launcher.sys, 'argv', ['baseline', 'calibrate', '--root', str(tmp_path),
+                        '--config', 'configs/intel-npu-fp16-baseline-openai.json', '--budget-on-openai'])
+    assert launcher.main() == 0
+    assert json.loads((tmp_path / 'calibration-v1.config.json').read_text())['corpus'].endswith('/calibration-inputs-fp16')
+
+
+@pytest.mark.parametrize('calibrated,evaluated', [('calibration-inputs', 'configs/intel-npu-fp16-baseline-openai.json'),
+                                                  ('calibration-inputs-fp16', 'configs/intel-npu-baseline-openai.json')])
+def test_evaluation_refuses_a_calibration_of_the_other_precision(tmp_path, monkeypatch, calibrated, evaluated):
+    from research import run_xdna2_baseline as launcher
+
+    calibration = tmp_path / 'calibration-v1'
+    calibration.mkdir()
+    config = StudyConfig.model_validate(json.loads(Path(evaluated).read_text())).model_dump()
+    (calibration / 'campaign.json').write_text(json.dumps({'config': config | {'corpus': str(tmp_path / calibrated)}}))
+    monkeypatch.setattr(launcher.subprocess, 'run', lambda *a, **kw: pytest.fail('must not send'))
+    monkeypatch.setattr(launcher.sys, 'argv', ['baseline', 'evaluate', '--root', str(tmp_path), '--config', evaluated,
+                        '--budget-on-openai', '--source-report', 'unused.json'])
+    with pytest.raises(ValueError, match='calibration precision differs from the evaluation corpus'):
+        launcher.main()
+
+
+def test_fp16_report_names_the_dataset_contract(tmp_path):
+    from npu_agent.study_v4 import case_schedule
+    from npu_agent.xdna2_baseline import build_report
+
+    config = intel_config()
+    campaign = {'config': config.model_dump(), 'status': 'blocked', 'blocker': 'Provider calibration unavailable',
+                'cases': case_schedule(config, ['add'], {'add': 'add'})}
+    (tmp_path / 'campaign.json').write_text(json.dumps(campaign))
+    (tmp_path / 'frozen' / 'corpus').mkdir(parents=True)
+    (tmp_path / 'frozen' / 'corpus' / 'dataset.json').write_bytes((FP16_DATASET / 'dataset.json').read_bytes())
+    assert build_report(tmp_path)['precision_contract'] == 'intel-fp16-v1'
+    assert 'come from the prepared intel-fp16-v1 dataset' in (tmp_path / 'results/REPORT.md').read_text()
+
+
+def test_fp16_launcher_wraps_the_intel_launcher():
+    import os
+    import subprocess
+
+    environment = {key: value for key, value in os.environ.items() if key != 'NPU_AGENT_INTEL_NPU_3720_RUNNER'}
+    shown = subprocess.run(['bash', 'scripts/run_intel_npu_fp16_baseline_openai.sh', '--help'], capture_output=True, text=True)
+    assert shown.returncode == 0 and 'INTEL_NPU_BASELINE_CONFIG' in shown.stdout
+    assert 'NPU_AGENT_INTEL_NPU_3720_TIMING' in shown.stdout and 'default 1000,200' in shown.stdout
+    refused = subprocess.run(['bash', 'scripts/run_intel_npu_fp16_baseline_openai.sh'], capture_output=True, text=True,
+                             env=environment)
+    assert refused.returncode == 2 and 'NPU_AGENT_INTEL_NPU_3720_RUNNER is not set' in refused.stderr

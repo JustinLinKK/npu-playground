@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "name": "cuda_tiled_matmul",
+  "source_file": "kernel.cu",
+  "dialect": "cuda",
+  "entrypoint": "matrix_mul",
+  "tensors": [
+    {
+      "name": "a",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        64,
+        64
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "b",
+      "direction": "input",
+      "dtype": "float16",
+      "shape": [
+        64,
+        64
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    },
+    {
+      "name": "output",
+      "direction": "output",
+      "dtype": "float16",
+      "shape": [
+        64,
+        64
+      ],
+      "layout": "row_major",
+      "strides": null,
+      "alias_of": null
+    }
+  ],
+  "scalars": [],
+  "constraints": [
+    "output = a multiplied by b",
+    "products accumulate in float32 and cast to float16",
+    "Intel FP16 variant: use the manifest tensor dtypes and scalar values even when the original GPU source uses float32. The reference evaluates the supplied FP16 inputs with FP32 or higher intermediates and rounds the final output to FP16."
+  ],
+  "tolerance": {
+    "rtol": 0.001,
+    "atol": 1e-05,
+    "equal_nan": false
+  },
+  "seed": 0,
+  "oracle": {
+    "kind": "builtin",
+    "operation": "matmul",
+    "parameters": {
+      "output_dtype": "float16"
+    }
+  },
+  "provenance": {
+    "repository": "https://github.com/NVIDIA/cuda-samples",
+    "commit": "b7c5481c556c3fe98db060207ecaa41a4b9a9abc",
+    "path": "cpp/0_Introduction/matrixMul/matrixMul.cu",
+    "license": "BSD-3-Clause",
+    "precision_contract": "intel-fp16-v1"
+  },
+  "numerical_domain": "finite"
+}

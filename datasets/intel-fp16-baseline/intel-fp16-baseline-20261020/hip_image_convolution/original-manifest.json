@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "name": "hip_image_convolution",
+  "source_file": "kernel.hip",
+  "dialect": "hip",
+  "entrypoint": "image_convolution",
+  "tensors": [
+    {"name": "input", "direction": "input", "dtype": "float32", "shape": [1, 1, 32, 32]},
+    {"name": "weight", "direction": "input", "dtype": "float32", "shape": [1, 1, 3, 3]},
+    {"name": "output", "direction": "output", "dtype": "float32", "shape": [1, 1, 32, 32]}
+  ],
+  "constraints": ["NCHW cross-correlation with stride one", "zero padding of one", "no bias"],
+  "tolerance": {"rtol": 1e-5, "atol": 1e-6, "equal_nan": false},
+  "seed": 0,
+  "oracle": {"kind": "builtin", "operation": "conv2d", "parameters": {"padding": 1}},
+  "provenance": {"repository": "https://github.com/ROCm/rocm-examples", "commit": "c3cae692de09d497d2bdb30a1bed41c1e9327312", "path": "HIP-Doc/Tutorials/Programming-Patterns/image_convolution/main.hip", "license": "MIT"}
+}
+

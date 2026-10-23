@@ -87,7 +87,10 @@ def reference(operation: str, args: list[np.ndarray], parameters: dict[str, Any]
 
 
 def execute_oracle(manifest: KernelManifest, inputs: dict[str, Any]) -> dict[str, np.ndarray]:
-    args = [inputs[t.name] for t in manifest.tensors if t.direction != 'output']
+    # FP16 inputs are evaluated with FP32 or higher intermediates and rounded once to the output dtype
+    # (the intel-fp16-v1 contract); NumPy float16 arithmetic would also round scalars and intermediates.
+    args = [np.asarray(inputs[t.name]).astype(np.float32) if t.dtype == 'float16' else inputs[t.name]
+            for t in manifest.tensors if t.direction != 'output']
     output = next(t for t in manifest.tensors if t.direction == 'output')
     value = np.asarray(reference(manifest.oracle.operation, args, manifest.oracle.parameters), dtype=output.dtype)
     if value.shape != output.shape:
