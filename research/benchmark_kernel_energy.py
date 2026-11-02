@@ -13,6 +13,8 @@ Run in the GPU venv (setup in research/time_original_gpu_kernels.py) with CC set
     ... --campaign RUN_ROOT/evaluation --timing-only --tasks all --cross-check
     ... --campaign RUN_ROOT/evaluation --tasks subset        (energy: leave the machine idle)
     ... --reanalyse RUN_ROOT/kernel-energy-<UTC>               (recompute an energy run from its trace)
+    ... --sweep all                    (size and batching sweep of research/sweep_kernels.py; energy, machine idle)
+    ... --intermittent relu_b1         (bursts of N calls every P seconds, against steady state; machine idle)
 """
 from __future__ import annotations
 
@@ -22,8 +24,10 @@ from datetime import UTC, datetime
 import fcntl
 import hashlib
 import json
+import math
 import multiprocessing
 from pathlib import Path
+import random
 import re
 import statistics
 import subprocess
@@ -32,10 +36,16 @@ import time
 
 import numpy as np
 
+try:
+    from tqdm import tqdm  # optional: a progress bar over measurements
+except ImportError:
+    tqdm = None
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / 'research'), str(ROOT / 'scripts')]
 
 import energy_meter  # noqa: E402
+import sweep_kernels  # noqa: E402
 import time_original_gpu_kernels as gpu_kernels  # noqa: E402
 from wsl_npu_bridge import LOCK, windows_path  # noqa: E402
 
@@ -52,6 +62,50 @@ NPU_MODES, GPU_MODES = ('npu_sync', 'npu_async'), ('gpu_sync', 'gpu_pipelined')
 HEADLINE = {'npu': 'soc', 'gpu': 'system'}
 ENERGY_RAILS = {'soc': ('pkg',), 'uncore': ('uncore',), 'host_cores': ('pp0',), 'gpu_board': ('gpu',),
                 'system': ('pkg', 'gpu')}
+# The campaign compiled its blobs with OpenVINO's plugin compiler; the Windows driver's own compiler (the default) is
+# up to 2.3x slower on large sweep shapes and took 736 s to compile a 16M-element add.
+NPU_SWEEP_PROPERTIES = {'NPU_COMPILER_TYPE': 'PLUGIN'}
+# Energy efficiency ratio (EER) comparisons: NPU mode vs GPU mode, and which energies are set against each other.
+COMPARISONS = {'sync': ('npu_sync', 'gpu_sync'), 'throughput': ('npu_async', 'gpu_pipelined')}
+MEASURES = {'headline': ('soc', 'system'), 'device': ('uncore', 'gpu_board')}
+
+
+class Progress:
+    """Progress over measurements on stderr: a tqdm bar when tqdm is installed, otherwise one counter line per step.
+    Log lines go above the bar. Inactive until start(), so imports and tests print plainly."""
+
+    def __init__(self):
+        self.total, self.done, self.started, self.bar = 0, 0, time.monotonic(), None
+
+    def start(self, total: int, desc: str, unit: str = 'run') -> None:
+        self.total, self.done, self.started = total, 0, time.monotonic()
+        if tqdm is not None and total:
+            self.bar = tqdm(total=total, desc=desc, unit=unit, smoothing=0, dynamic_ncols=True, file=sys.stderr)
+
+    def log(self, text: str) -> None:
+        if self.bar is not None:
+            self.bar.write(text, file=sys.stderr)
+        else:
+            print(text, flush=True)
+
+    def step(self, label: str, count: int = 1) -> None:
+        self.done += count
+        if self.bar is not None:
+            self.bar.set_postfix_str(label, refresh=False)
+            self.bar.update(count)
+        elif self.total:
+            elapsed = time.monotonic() - self.started
+            left = elapsed / self.done * (self.total - self.done)
+            print(f'[{self.done}/{self.total}] {elapsed / 60:.1f} min elapsed, about {left / 60:.0f} min left: {label}',
+                  file=sys.stderr, flush=True)
+
+    def close(self) -> None:
+        if self.bar is not None:
+            self.bar.close()
+            self.bar = None
+
+
+progress = Progress()
 
 
 def sha256(path: Path) -> str:
@@ -399,19 +453,82 @@ def summarize(pairs: list[dict]) -> dict:
     return out
 
 
-def analyse(trace: dict, windows: list[dict]) -> dict:
+def compare(results: dict) -> dict:
+    """EER ratio GPU:NPU per task = NPU energy per inference / GPU energy per inference (above 1: the GPU does more
+    inferences per joule), with its geometric mean over tasks."""
+    out = {}
+    for name, (npu, gpu) in COMPARISONS.items():
+        for measure, (npu_energy, gpu_energy) in MEASURES.items():
+            tasks = {}
+            for kernel, modes in results.items():
+                if npu in modes and gpu in modes:
+                    found = energy_meter.ratio(modes[npu]['energy_uj'].get(npu_energy), modes[gpu]['energy_uj'].get(gpu_energy))
+                    if found:
+                        tasks[kernel] = found
+            out[f'{name}_{measure}'] = {
+                'npu': f'{npu} {npu_energy}', 'gpu': f'{gpu} {gpu_energy}', 'tasks': tasks,
+                'overall': energy_meter.geometric_mean([r['ratio'] for r in tasks.values()]) if tasks else None}
+    return out
+
+
+def ratio_cell(found: dict | None) -> str:
+    if not found:
+        return 'n/a'
+    low, high = found['ci95'] or (None, None)
+    value = found.get('ratio', found.get('geomean'))
+    return f'{value:.2f}' + (f' [{low:.2f}, {high:.2f}]' if low is not None else '')
+
+
+def analyse(trace: dict, windows: list[dict], baseline: str = 'p8') -> dict:
+    """Paired estimates per task and mode. Baseline 'p8': an idle window inside the GPU's post-work P1 hold is not a
+    baseline, and a GPU wake-up during an NPU run means something else used the GPU, so that run is dropped. Baseline
+    'desktop': the GPU's state under normal desktop use is the baseline, so every window counts (the schedule has
+    waited out the GPU's own post-work hold)."""
     for window in windows:
         window['power'] = energy_meter.window_power(trace, window['start'], window['end'])
-        # An idle window inside the GPU's post-work P1 hold is not a baseline. A GPU wake-up during an NPU run means
-        # something else on the machine used it (display, another process), so that run is dropped.
+        window['gpu_p8_fraction'] = energy_meter.idle_pstate_fraction(trace, window['start'], window['end'])
         if window['kind'] == 'idle' or window['mode'].startswith('npu'):
-            window['settled'] = energy_meter.gpu_settled(trace, window['start'], window['end'])
+            window['settled'] = baseline == 'desktop' or energy_meter.gpu_settled(trace, window['start'], window['end'])
     results = {}
     for kernel in dict.fromkeys(w['task'] for w in windows):
         pairs = energy_meter.paired_deltas([w for w in windows if w['task'] == kernel])
         results[kernel] = {mode: summarize([p for p in pairs if p['mode'] == mode])
                            for mode in dict.fromkeys(p['mode'] for p in pairs)}
     return results
+
+
+def settle_gpu(meter: Meter, args) -> float:
+    """After GPU work, before an idle window: wait for P8 (baseline 'p8', at most --settle s), or a fixed
+    --desktop-settle s for the GPU's own post-work P1 hold to end (baseline 'desktop'). Returns the wait."""
+    if args.baseline == 'desktop':
+        time.sleep(args.desktop_settle)
+        return args.desktop_settle
+    return meter.wait_gpu_idle(args.settle)
+
+
+def interleaved(args, meter: Meter, worker: Helper, steps: dict, modes: list[str], label: str, seed: int,
+                cycles: int) -> list[dict]:
+    """One task's I R I R ... I schedule: every mode once per cycle in shuffled order, an idle window after each run,
+    and a wait for the GPU's idle P-state after GPU work (docs/time-energy-measurement.md, Session layout)."""
+    if 'gpu_sync' in modes:
+        warm_gpu(steps, args.gpu_warmup, args.gpu_warmup_seconds)
+    settle = settle_gpu(meter, args)  # the GPU checks and warm-up leave it in P1
+    windows = [idle_window(meter, args.idle_seconds, task=label, mode='idle', cycle=-1, settle_s=settle)]
+    for position, mode in enumerate(energy_meter.schedule(modes, cycles, seed)):
+        if mode.startswith('npu'):
+            result = npu_window(worker, meter, mode, args.warm, args.run_seconds, args.tail, args.nireq)
+        else:
+            step, finish = steps[mode]
+            result = gpu_window(step, finish, meter, args.warm, args.run_seconds, args.tail)
+        start, end = meter.collect(2)
+        windows.append(run_record(start, end, result, task=label, mode=mode, cycle=position // len(modes)))
+        settle = settle_gpu(meter, args) if mode.startswith('gpu') else 0.0
+        time.sleep(args.guard)
+        windows.append(idle_window(meter, args.idle_seconds, task=label, mode='idle', cycle=position // len(modes),
+                                   settle_s=settle))
+        progress.log(f'  {label:24s} {mode:14s} {result["per_call_s"] * 1e6:10.1f} us/call')
+        progress.step(f'{label} {mode}')
+    return windows
 
 
 def energy_task(args, meter: Meter, output: Path, index: int, kernel: str, blob: dict, cases: list[str]) -> tuple[list, dict]:
@@ -424,24 +541,92 @@ def energy_task(args, meter: Meter, output: Path, index: int, kernel: str, blob:
         task, notes['gpu_error'] = None, f'{type(exc).__name__}: {exc}'
     modes = list(NPU_MODES) + (list(GPU_MODES) if task is not None and notes['gpu_correct'] else [])
     steps = gpu_steps(task) if task is not None else {}
-    if 'gpu_sync' in modes:
-        warm_gpu(steps, args.gpu_warmup, args.gpu_warmup_seconds)
-    settle = meter.wait_gpu_idle(args.settle)  # the GPU checks and warm-up leave it in P1
-    windows = [idle_window(meter, args.idle_seconds, task=kernel, mode='idle', cycle=-1, settle_s=settle)]
     try:
-        for position, mode in enumerate(energy_meter.schedule(modes, args.cycles, args.seed + index)):
-            if mode.startswith('npu'):
-                result = npu_window(worker, meter, mode, args.warm, args.run_seconds, args.tail, args.nireq)
-            else:
-                step, finish = steps[mode]
-                result = gpu_window(step, finish, meter, args.warm, args.run_seconds, args.tail)
-            start, end = meter.collect(2)
-            windows.append(run_record(start, end, result, task=kernel, mode=mode, cycle=position // len(modes)))
-            settle = meter.wait_gpu_idle(args.settle) if mode.startswith('gpu') else 0.0
-            time.sleep(args.guard)
-            windows.append(idle_window(meter, args.idle_seconds, task=kernel, mode='idle', cycle=position // len(modes),
-                                       settle_s=settle))
-            print(f'  {kernel:24s} {mode:14s} {result["per_call_s"] * 1e6:8.1f} us/call', flush=True)
+        windows = interleaved(args, meter, worker, steps, modes, kernel, args.seed + index, args.cycles)
+    finally:
+        worker.close(cmd='quit')
+        meter.flush()
+    if len(modes) < 4:  # the GPU original failed: its runs were planned but not measured
+        progress.step(f'{kernel}: GPU modes skipped', args.cycles * (4 - len(modes)))
+    return windows, notes
+
+
+def prepare_sweep(args, output: Path, name: str) -> tuple[Helper, dict, dict]:
+    """Build one research/sweep_kernels.py configuration on both devices from the same saved FP16 inputs, check both
+    outputs against the float32 reference, and warm the NPU. Returns the worker, notes and the GPU steps."""
+    import torch
+
+    spec = sweep_kernels.SWEEP[name]
+    folder = output / 'sweep' / name
+    folder.mkdir(parents=True, exist_ok=True)
+    feed = sweep_kernels.inputs(spec)
+    np.savez(folder / 'inputs.npz', **feed)
+    want = sweep_kernels.reference(spec, feed)
+    worker = Helper([args.windows_python, '-B', windows_path(WORKER)], output / 'npu-worker.log')
+    info = worker.call(cmd='build', config=name, inputs=windows_path(folder / 'inputs.npz'),
+                       out=windows_path(folder / 'npu-output.npz'), properties=NPU_SWEEP_PROPERTIES)
+    with np.load(folder / 'npu-output.npz') as saved:
+        notes = {'spec': spec, 'npu': info, 'npu_check': sweep_kernels.check(spec, saved['out'], want)}
+    worker.call(cmd='warmup', count=args.npu_warmup, seconds=args.sweep_warmup_seconds)
+    tensors = {key: torch.from_numpy(value).cuda() for key, value in feed.items()}
+    launch = sweep_kernels.torch_launch(spec, tensors)
+    notes['gpu_check'] = sweep_kernels.check(spec, launch().cpu().numpy(), want)
+
+    def sync():
+        launch()
+        torch.cuda.synchronize()
+
+    return worker, notes, {'gpu_sync': (sync, None), 'gpu_pipelined': (launch, torch.cuda.synchronize)}
+
+
+def sweep_task(args, meter: Meter, output: Path, index: int, name: str) -> tuple[list, dict]:
+    worker, notes, steps = prepare_sweep(args, output, name)
+    try:
+        windows = interleaved(args, meter, worker, steps, list(NPU_MODES) + list(GPU_MODES), name, args.seed + index,
+                              args.cycles)
+    finally:
+        worker.close(cmd='quit')
+        meter.flush()
+    return windows, notes
+
+
+def bursts_window(args, meter: Meter, worker: Helper, steps: dict, label: str, mode: str, calls: int, period: float,
+                  repeat: int) -> dict:
+    """One intermittent-load measurement: `count` periods of one burst each, marked at every burst start and at the
+    end, so the sampler can split the load into whole periods."""
+    count = max(args.min_bursts, math.ceil(args.bursts_seconds / period))
+    if mode.startswith('npu'):
+        worker.send(cmd='bursts', mode=mode.removeprefix('npu_'), calls=calls, period=period, count=count, nireq=args.nireq)
+        while (result := worker.receive()).get('event') != 'done':
+            meter.mark()
+    else:
+        step, finish = steps[mode]
+        result = energy_meter.bursts(step, calls, period, count, time.perf_counter, time.sleep, finish=finish,
+                                     begin=meter.mark, end=meter.mark)
+    marks = meter.collect(count + 1)
+    return {'kind': 'bursts', 'task': label, 'mode': mode, 'calls': calls, 'period': period, 'count': count,
+            'repeat': repeat, 'start': marks[0], 'end': marks[-1], 'marks': marks, 'burst_s': result['burst_s'],
+            'overrun': result['overrun']}
+
+
+def intermittent_task(args, meter: Meter, output: Path, name: str) -> tuple[list, dict]:
+    """Steady-state runs of the sync modes, then bursts of each size at each period, R times in shuffled order,
+    each between idle windows taken with the GPU at P8."""
+    worker, notes, steps = prepare_sweep(args, output, name)
+    modes = ['npu_sync', 'gpu_sync']
+    try:
+        windows = interleaved(args, meter, worker, steps, modes, name, args.seed, args.steady_cycles)
+        conditions = [(mode, calls, period) for mode in modes for calls in args.burst_calls for period in args.burst_periods]
+        rng = random.Random(args.seed)
+        for repeat in range(args.burst_repeats):
+            rng.shuffle(conditions)
+            for mode, calls, period in conditions:
+                windows.append(bursts_window(args, meter, worker, steps, name, mode, calls, period, repeat))
+                settle = settle_gpu(meter, args) if mode.startswith('gpu') else 0.0
+                time.sleep(args.guard)
+                windows.append(idle_window(meter, args.idle_seconds, task=name, mode='idle', cycle=repeat, settle_s=settle))
+                progress.log(f'  {name} {mode} {calls} calls every {period:g} s (repeat {repeat + 1})')
+                progress.step(f'{mode} {calls} x every {period:g} s')
     finally:
         worker.close(cmd='quit')
         meter.flush()
@@ -597,7 +782,27 @@ def write_timing(path: Path, rows: list[dict], environment: dict) -> None:
     path.write_text('\n'.join(lines))
 
 
-def write_energy(path: Path, results: dict, notes: dict, environment: dict, args, windows: list[dict]) -> dict:
+def baseline_note(args, windows: list[dict]) -> str:
+    """One paragraph on which idle windows were baselines and what the GPU was doing in them."""
+    idles = [w for w in windows if w['kind'] == 'idle']
+    npu = [w for w in windows if w['kind'] != 'idle' and w['mode'].startswith('npu')]
+    board = [w['power']['gpu'] for w in idles if 'gpu' in w.get('power', {})]
+    p8 = [w['gpu_p8_fraction'] for w in idles if w.get('gpu_p8_fraction') is not None]
+    gpu = (f' Idle GPU board power: mean {statistics.mean(board):.1f} W (range {min(board):.1f}–{max(board):.1f} W); '
+           f'the GPU was at P{energy_meter.GPU_IDLE_PSTATE} in {statistics.mean(p8):.0%} of idle samples.') if board and p8 else ''
+    interpolated = 'The idle power under a run is interpolated in time between its nearest baseline idle windows. '
+    if getattr(args, 'baseline', 'p8') == 'desktop':
+        return (interpolated + 'Baseline: normal desktop use. Every idle window is a baseline, whatever state other programs keep the '
+                f'GPU in, and no run is dropped. After GPU work the schedule waits {args.desktop_settle:g} s, so the GPU\'s '
+                'own post-work P1 hold has ended before the next idle window. Energies are therefore the extra energy '
+                'over the machine as it was being used.' + gpu)
+    return (interpolated + f'Idle windows used as baselines: {sum(w.get("settled", True) for w in idles)} of {len(idles)}; the others '
+            f'were skipped because the GPU was not in its idle P-state (P{energy_meter.GPU_IDLE_PSTATE}) for '
+            f'{energy_meter.SETTLED_FRACTION:.0%} of the window. NPU runs and bursts dropped because the GPU woke up '
+            f'during them (another program used it): {sum(not w.get("settled", True) for w in npu)} of {len(npu)}.' + gpu)
+
+
+def write_energy(path: Path, results: dict, notes: dict, environment: dict, args, windows: list[dict]) -> tuple[dict, dict]:
     by_mode = {}
     for kernel, modes in results.items():
         for mode, summary in modes.items():
@@ -605,22 +810,30 @@ def write_energy(path: Path, results: dict, notes: dict, environment: dict, args
             if headline:
                 by_mode.setdefault(mode, []).append(headline['mean'])
     overall = {mode: energy_meter.estimate(values) for mode, values in by_mode.items()}
-    idles = [w for w in windows if w['kind'] == 'idle']
-    npu_runs = [w for w in windows if w['kind'] == 'run' and w['mode'].startswith('npu')]
+    comparison = compare(results)
     lines = ['# Kernel energy', '',
              f'{args.cycles} cycles per task of {args.run_seconds:g} s run windows between {args.idle_seconds:g} s idle '
              'windows, run order shuffled per cycle. Energy per inference = (run power − mean of the neighbouring idle '
              'powers) × time per call. NPU headline: package (SoC) energy; GPU headline: package + GPU board ("system"). '
              'Brackets are 95% confidence intervals; "n.s." means the interval includes zero and the value shown is a '
              'one-sided 95% upper bound; n is the number of paired runs. Method and caveats: '
-             'docs/time-energy-measurement.md.', '',
-             f'Idle windows used as baselines: {sum(w.get("settled", True) for w in idles)} of {len(idles)}; the others '
-             f'were skipped because the GPU was not in its idle P-state (P{energy_meter.GPU_IDLE_PSTATE}) for '
-             f'{energy_meter.SETTLED_FRACTION:.0%} of the window. NPU runs dropped because the GPU woke up during '
-             f'them (another program used it): {sum(not w.get("settled", True) for w in npu_runs)} of {len(npu_runs)}.', '',
+             'docs/time-energy-measurement.md.', '', baseline_note(args, windows), '',
              f'Environment: `{json.dumps(environment)}`', '',
              '## Mean over tasks (headline energy per inference, µJ)', '', '| Mode | Tasks | Mean [95% CI] |', '| --- | ---: | ---: |']
     lines += [f'| {mode} | {estimate["n"]} | {interval(estimate)} |' for mode, estimate in overall.items()]
+    lines += ['', '## Energy efficiency ratio (EER), GPU : NPU', '',
+              'EER = inferences per joule = 1 / energy per inference. Per task, EER(GPU) / EER(NPU) = NPU energy per '
+              'inference / GPU energy per inference, so a value above 1 means the GPU is more efficient. Brackets: '
+              '95% CI (delta method on the log scale per task; between-task t-interval of the logs overall). The '
+              'overall value is the geometric mean of the per-task ratios.', '',
+              '| Comparison | NPU energy | GPU energy | Geomean [95% CI] | Range | Tasks |', '| --- | --- | --- | ---: | ---: | ---: |']
+    for name, entry in comparison.items():
+        o = entry['overall']
+        spread = f'{o["min"]:.2f}–{o["max"]:.2f}' if o else 'n/a'
+        lines.append(f'| {name} | {entry["npu"]} | {entry["gpu"]} | {ratio_cell(o)} | {spread} | {o["n"] if o else 0} |')
+    lines += ['', '| Task | ' + ' | '.join(comparison) + ' |', '| --- |' + ' ---: |' * len(comparison)]
+    lines += [f'| {kernel} | ' + ' | '.join(ratio_cell(entry['tasks'].get(kernel)) for entry in comparison.values()) + ' |'
+              for kernel in results]
     lines += ['', '## Per task', '',
               '| Task | Mode | n | µs/call | ΔPKG W | ΔUncore W | ΔCores W | ΔGPU W | Energy µJ/inference | Inferences/J | Gross µJ |',
               '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
@@ -634,7 +847,134 @@ def write_energy(path: Path, results: dict, notes: dict, environment: dict, args
     flagged = {k: v['reproduced'] for k, v in notes.items() if v['reproduced']['bit_identical'] != v['reproduced']['cases_checked']}
     lines += ['', f'NPU outputs not bit-identical to the campaign\'s saved outputs: {json.dumps(flagged) if flagged else "none"}.', '']
     path.write_text('\n'.join(lines))
-    return overall
+    return overall, comparison
+
+
+def write_sweep(path: Path, results: dict, comparison: dict, notes: dict, environment: dict, args, windows: list[dict]) -> None:
+    def per_call(name, mode):
+        summary = results.get(name, {}).get(mode)
+        return summary['per_call_us'] if summary else None
+
+    def energy(name, mode, part=None):
+        summary = results.get(name, {}).get(mode)
+        return summary['energy_uj'].get(part or summary['headline']) if summary else None
+
+    lines = ['# Size and batching sweep', '',
+             'One native op per configuration, FP16 in and out on both devices: an OpenVINO graph compiled for the NPU '
+             f'with {json.dumps(NPU_SWEEP_PROPERTIES)} and the matching torch op on the GPU (research/sweep_kernels.py). '
+             '*size*: one instance grows; *batch*: B copies of a dataset task\'s shape in one call. Energy per call: '
+             f'{args.cycles} cycles of {args.run_seconds:g} s runs between {args.idle_seconds:g} s idles, as in the '
+             'energy runs (NPU: package energy; GPU: package + board). EER GPU : NPU = NPU energy / GPU energy per '
+             'call, so above 1 the GPU is more efficient. Brackets are 95% CIs. Method: docs/time-energy-measurement.md.',
+             '', baseline_note(args, windows), '', f'Environment: `{json.dumps(environment)}`', '', '## Time per call (µs)', '',
+             '| Config | Axis | Output elements | NPU sync | NPU async | GPU sync | GPU pipelined | NPU async ÷ GPU pipelined | Within 2^-10 (NPU / GPU) |',
+             '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for name, note in notes.items():
+        spec = note['spec']
+        times = [per_call(name, mode) for mode in ('npu_sync', 'npu_async', 'gpu_sync', 'gpu_pipelined')]
+        speed = times[1] / times[3] if times[1] and times[3] else None
+        lines.append(f'| {name} | {spec["axis"]} | {spec["elements"]} | ' + ' | '.join(number(t) for t in times) +
+                     f' | {number(speed, 1)} | {note["npu_check"]["within_tolerance"]:.1%} / {note["gpu_check"]["within_tolerance"]:.1%} |')
+    lines += ['', '## Energy per call (µJ) and EER', '',
+              '| Config | NPU sync | NPU async | GPU sync | GPU pipelined | EER sync | EER throughput | EER throughput, device only |',
+              '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for name in notes:
+        lines.append(f'| {name} | ' + ' | '.join(energy_cell(energy(name, mode)) for mode in
+                                                 ('npu_sync', 'npu_async', 'gpu_sync', 'gpu_pipelined')) + ' | ' +
+                     ' | '.join(ratio_cell(comparison[key]['tasks'].get(name))
+                                for key in ('sync_headline', 'throughput_headline', 'throughput_device')) + ' |')
+    lines += ['', '## Throughput modes per unit of work', '',
+              'Energy per output element (nJ) and, on the batch axis, per instance (µJ); rate in GB/s moved (FP16 inputs '
+              'and outputs) or, for matmul, TFLOP/s.', '',
+              '| Config | NPU nJ/element | GPU nJ/element | NPU µJ/instance | GPU µJ/instance | NPU rate | GPU rate |',
+              '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for name, note in notes.items():
+        spec = note['spec']
+        cells = []
+        for mode in ('npu_async', 'gpu_pipelined'):
+            e = energy(name, mode)
+            cells.append(number(e['mean'] * 1e3 / spec['elements'], 3) if e else 'n/a')
+        for mode in ('npu_async', 'gpu_pipelined'):
+            e = energy(name, mode)
+            cells.append(number(e['mean'] / spec['instances'], 2) if e and spec['axis'] == 'batch' else '')
+        for mode in ('npu_async', 'gpu_pipelined'):
+            t = per_call(name, mode)
+            rate = (spec['flops'] / (t * 1e-6) / 1e12 if spec['op'] == 'matmul' else spec['bytes'] / (t * 1e-6) / 1e9) if t else None
+            cells.append(number(rate, 2) + (' TFLOP/s' if spec['op'] == 'matmul' else ' GB/s') if rate else 'n/a')
+        lines.append(f'| {name} | ' + ' | '.join(cells) + ' |')
+    lines.append('')
+    path.write_text('\n'.join(lines))
+
+
+def summarize_bursts(trace: dict, windows: list[dict], steady: dict) -> list[dict]:
+    """Per device mode, burst size and period: energy per period (one burst plus what follows it) over the repeats,
+    per inference, and against the steady-state energy per inference of the same mode."""
+    groups = {}
+    for found in energy_meter.burst_energies(trace, windows):
+        groups.setdefault((found['task'], found['mode'], found['calls'], found['period']), []).append(found)
+    idle_gpu = [w['power']['gpu'] for w in windows if energy_meter.usable_idle(w) and 'gpu' in w['power']]
+    rows = []
+    for (task, mode, calls, period), found in groups.items():
+        device = mode.split('_')[0]
+        parts = ENERGY_RAILS[HEADLINE[device]]
+        headline = energy_meter.estimate([sum(f['energy_j'][r] for r in parts) for f in found])
+        steady_uj = steady.get(task, {}).get(mode, {}).get('energy_uj', {}).get(HEADLINE[device], {}).get('mean')
+        bursts = [d for f in found for d in f['burst_s']]
+        rows.append({'task': task, 'mode': mode, 'calls': calls, 'period': period, 'repeats': len(found),
+                     'periods_per_repeat': found[0]['count'], 'headline': HEADLINE[device], 'energy_j': headline,
+                     'gpu_board_j': energy_meter.estimate([f['energy_j'].get('gpu', 0.0) for f in found]),
+                     'uncore_j': energy_meter.estimate([f['energy_j']['uncore'] for f in found]),
+                     'per_inference_uj': headline['mean'] / calls * 1e6, 'steady_uj': steady_uj,
+                     'versus_steady': headline['mean'] / calls * 1e6 / steady_uj if steady_uj else None,
+                     'burst_ms_median': statistics.median(bursts) * 1e3, 'first_burst_ms': [f['burst_s'][0] * 1e3 for f in found],
+                     'gpu_idle_w': statistics.mean(idle_gpu) if idle_gpu else None,
+                     'overrun': any(f['overrun'] for f in found)})
+    return sorted(rows, key=lambda r: (r['calls'], r['period'], r['mode']))
+
+
+def write_intermittent(path: Path, rows: list[dict], steady: dict, notes: dict, environment: dict, args,
+                       windows: list[dict]) -> list[dict]:
+    lines = ['# Intermittent-load energy', '',
+             f'Every period P, one burst of N synchronous calls; the device then idles until the next burst. Each '
+             f'measurement covers at least {args.min_bursts} periods and {args.bursts_seconds:g} s, between baseline idle '
+             'windows (below), and is repeated in shuffled order. Energy per burst = energy of a whole period '
+             '(the burst and everything after it, including any power tail) above the idle power interpolated in '
+             'time; NPU: package energy, GPU: package + board. Brackets: 95% CI over the repeats. *Steady* is the '
+             'energy per inference of back-to-back calls in the same session. EER GPU : NPU = NPU energy / GPU energy '
+             'per burst (above 1: the GPU is more efficient). Method: docs/time-energy-measurement.md.', '',
+             baseline_note(args, windows), '', f'Environment: `{json.dumps(environment)}`', '',
+             '| N calls | Period s | Device | Energy per burst, J | of which GPU board, J | µJ per inference | Steady µJ | × steady | Median burst, ms |',
+             '| ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for row in rows:
+        significant = row['energy_j']['significant']
+        per_inference = (number(row['per_inference_uj'], 0) if significant else
+                         f'< {row["energy_j"]["upper95"] / row["calls"] * 1e6:.0f} (n.s.)' if row['energy_j']['upper95'] else 'n/a')
+        lines.append(f'| {row["calls"]} | {row["period"]:g} | {row["mode"]} | {interval(row["energy_j"], 3)} | '
+                     f'{interval(row["gpu_board_j"], 3) if row["mode"].startswith("gpu") else ""} | '
+                     f'{per_inference} | {number(row["steady_uj"], 0)} | {number(row["versus_steady"], 1) if significant else ""} | '
+                     f'{number(row["burst_ms_median"], 2)}{" (overran the period)" if row["overrun"] else ""} |')
+    comparisons = []
+    lines += ['', '## EER, GPU : NPU, per burst', '',
+              'The last column adds the GPU board\'s mean idle power (from the idle windows) × P to each GPU burst: the '
+              'case where the GPU is installed only for this load.', '',
+              '| N calls | Period s | EER [95% CI] | GPU incl. its idle board power |',
+              '| ---: | ---: | ---: | ---: |']
+    for calls, period in dict.fromkeys((r['calls'], r['period']) for r in rows):
+        npu = next((r for r in rows if (r['calls'], r['period'], r['mode']) == (calls, period, 'npu_sync')), None)
+        gpu = next((r for r in rows if (r['calls'], r['period'], r['mode']) == (calls, period, 'gpu_sync')), None)
+        if not npu or not gpu:
+            continue
+        found = energy_meter.ratio(npu['energy_j'], gpu['energy_j'])
+        npu_value = npu['energy_j']['mean'] if found else npu['energy_j']['upper95']  # an upper bound if not significant
+        cell = ratio_cell(found) if found else (f'< {npu_value / gpu["energy_j"]["mean"]:.3f} (NPU n.s.)'
+                                                if npu_value and gpu['energy_j']['significant'] else 'n.s.')
+        # If the GPU were installed only for this load, its idle board power would also count, every period.
+        dedicated = npu_value / (gpu['energy_j']['mean'] + gpu['gpu_idle_w'] * period) if npu_value and gpu['gpu_idle_w'] else None
+        comparisons.append({'calls': calls, 'period': period, 'eer': found, 'eer_cell': cell, 'eer_with_gpu_idle': dedicated})
+        lines.append(f'| {calls} | {period:g} | {cell} | {"< " if not found and dedicated else ""}{number(dedicated, 3)} |')
+    lines.append('')
+    path.write_text('\n'.join(lines))
+    return comparisons
 
 
 def write_validation(path: Path, report: dict) -> None:
@@ -690,16 +1030,24 @@ def main() -> None:
     kind = parser.add_mutually_exclusive_group()
     kind.add_argument('--timing-only', action='store_true', help='time every selected task; no energy windows')
     kind.add_argument('--validate', action='store_true', help='instrument checks only (V1, V3, V5)')
-    kind.add_argument('--reanalyse', type=Path, metavar='ENERGY_RUN',
-                      help='recompute an energy run from its trace.csv and windows.json into ENERGY-reanalysed.md')
+    kind.add_argument('--reanalyse', type=Path, metavar='RUN',
+                      help='recompute an energy, sweep or intermittent run from its trace.csv and windows.json')
+    kind.add_argument('--sweep', metavar='CONFIGS',
+                      help="size and batching sweep of research/sweep_kernels.py: 'all' or comma-separated names")
+    kind.add_argument('--intermittent', metavar='CONFIG', help='intermittent-load energy of one sweep configuration')
     parser.add_argument('--cross-check', action='store_true', help='with --timing-only: also run benchmark_app and NVBench')
     parser.add_argument('--cycles', type=int, default=6)
     parser.add_argument('--run-seconds', type=float, default=6.0)
     parser.add_argument('--idle-seconds', type=float, default=5.0)
     parser.add_argument('--warm', type=float, default=1.0, help='busy seconds before each counted window')
     parser.add_argument('--tail', type=float, default=0.5, help='busy seconds after each counted window')
+    parser.add_argument('--baseline', choices=('p8', 'desktop'), default='p8',
+                        help="idle baseline: 'p8' = only idle windows with the GPU at P8 (a quiet machine); 'desktop' = "
+                             'every idle window, the GPU as other programs leave it (normal use)')
     parser.add_argument('--settle', type=float, default=20.0,
-                        help='longest wait (s) after GPU work for the GPU to reach its idle P-state before an idle window')
+                        help='baseline p8: longest wait (s) after GPU work for the GPU to reach P8 before an idle window')
+    parser.add_argument('--desktop-settle', type=float, default=10.0,
+                        help="baseline desktop: fixed wait (s) after GPU work for the GPU's own P1 hold to end")
     parser.add_argument('--guard', type=float, default=0.5, help='seconds after an NPU run before the next idle window')
     parser.add_argument('--nireq', type=int, default=4, help='NPU requests in flight in async mode')
     parser.add_argument('--npu-warmup', type=int, default=1000)
@@ -714,17 +1062,33 @@ def main() -> None:
     parser.add_argument('--validate-idle', type=float, default=180.0)
     parser.add_argument('--interval', type=float, default=0.02, help='sampler period (s)')
     parser.add_argument('--seed', type=int, default=20261031)
+    parser.add_argument('--start-when-idle', type=float, default=0.0, metavar='SECONDS',
+                        help='before measuring, wait (up to 12 h) until the GPU has sat at its idle P-state this long')
+    parser.add_argument('--sweep-warmup-seconds', type=float, default=5.0, help='longest NPU warm-up of a sweep config')
+    parser.add_argument('--steady-cycles', type=int, default=3, help='steady-state cycles of an intermittent run')
+    parser.add_argument('--burst-calls', type=lambda text: [int(x) for x in text.split(',')], default=[1, 1000])
+    parser.add_argument('--burst-periods', type=lambda text: [float(x) for x in text.split(',')], default=[1.0, 5.0, 20.0])
+    parser.add_argument('--burst-repeats', type=int, default=3)
+    parser.add_argument('--bursts-seconds', type=float, default=30.0, help='shortest intermittent measurement')
+    parser.add_argument('--min-bursts', type=int, default=3, help='fewest periods in an intermittent measurement')
     parser.add_argument('--windows-python', default='/mnt/c/npu-runner/venv/Scripts/python.exe')
     args = parser.parse_args()
     if args.reanalyse:
         reanalyse(args.reanalyse.resolve())
         return
-    if args.campaign is None:
+    synthetic = bool(args.sweep or args.intermittent)  # no campaign: the sweep builds its own kernels
+    if args.campaign is None and not synthetic:
         parser.error('--campaign is required')
-    evaluation, args.dataset = args.campaign.resolve(), args.dataset.resolve()
+    if args.sweep and args.sweep != 'all' and not set(args.sweep.split(',')) <= set(sweep_kernels.SWEEP):
+        parser.error(f'--sweep names must come from: {", ".join(sweep_kernels.SWEEP)}')
+    if args.intermittent and args.intermittent not in sweep_kernels.SWEEP:
+        parser.error(f'--intermittent must be one of: {", ".join(sweep_kernels.SWEEP)}')
+    args.dataset = args.dataset.resolve()
     stamp = datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')
-    kind_name = 'validate' if args.validate else 'timing' if args.timing_only else 'energy'
-    output = (args.output or evaluation.parent / f'kernel-{kind_name}-{stamp}').resolve()
+    kind_name = ('validate' if args.validate else 'timing' if args.timing_only else 'sweep' if args.sweep
+                 else 'intermittent' if args.intermittent else 'energy')
+    default = ROOT / 'runs' if synthetic else args.campaign.resolve().parent
+    output = (args.output or default / f'kernel-{kind_name}-{stamp}').resolve()
     output.mkdir(parents=True, exist_ok=False)
     (output / 'arguments.json').write_text(json.dumps({k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}, indent=2))
     locks = []
@@ -737,15 +1101,22 @@ def main() -> None:
             raise SystemExit(f'{path} is held by another NPU or energy job; wait for it to finish')
     dataset = json.loads((args.dataset / 'dataset.json').read_text())
     cases = {task['kernel']: task['cases'] for task in dataset['tasks']}
-    blobs = accepted_blobs(evaluation)
-    kernels = select(args, dataset, blobs)
+    if synthetic:
+        blobs = {}
+        kernels = (list(sweep_kernels.SWEEP) if args.sweep == 'all' else args.sweep.split(',')) if args.sweep else []
+    else:
+        blobs = accepted_blobs(args.campaign.resolve())
+        kernels = select(args, dataset, blobs)
     print(f'Output: {output}', flush=True)
     if args.timing_only:
         rows = []
+        progress.start(len(kernels), 'timing', 'task')
         for kernel in kernels:
-            print(f'timing {kernel}', flush=True)
+            progress.log(f'timing {kernel}')
             rows.append(time_task(args, output, kernel, blobs.get(kernel), cases[kernel]))
             (output / 'timing.json').write_text(json.dumps(rows, indent=2))
+            progress.step(kernel)
+        progress.close()
         nv = nvbench(args, [r['kernel'] for r in rows if r['gpu'].get('correct')], output / 'crosscheck') if args.cross_check else {}
         for row in rows:
             row['nvbench'] = nv.get(row['kernel'], {})
@@ -758,38 +1129,67 @@ def main() -> None:
     meter = Meter(args, output)
     try:
         environment = environment_info(args, meter)
+        if args.start_when_idle:
+            print(f'waiting until the GPU has sat at P{energy_meter.GPU_IDLE_PSTATE} for {args.start_when_idle:g} s', flush=True)
+            environment['waited_for_idle_s'] = meter.wait_gpu_idle(12 * 3600, hold=args.start_when_idle)
+            print(f'started after {environment["waited_for_idle_s"]:.0f} s', flush=True)
         if args.validate:
-            report = validate(args, meter, output)
-            (output / 'validation.json').write_text(json.dumps({'environment': environment, **report}, indent=2))
-            write_validation(output / 'VALIDATION.md', report)
+            validation = validate(args, meter, output)
+            (output / 'validation.json').write_text(json.dumps({'environment': environment, **validation}, indent=2))
+            write_validation(output / 'VALIDATION.md', validation)
             print(f'Report: {output / "VALIDATION.md"}')
             return
         windows, notes = [], {}
+        if args.intermittent:
+            progress.start(2 * args.steady_cycles + args.burst_repeats * 2 * len(args.burst_calls) * len(args.burst_periods),
+                           'intermittent')
+            progress.log(f'intermittent {args.intermittent}')
+            windows, notes[args.intermittent] = intermittent_task(args, meter, output, args.intermittent)
+        else:
+            progress.start(len(kernels) * args.cycles * (len(NPU_MODES) + len(GPU_MODES)), kind_name)
         for index, kernel in enumerate(kernels):
-            print(f'energy {kernel} ({index + 1}/{len(kernels)})', flush=True)
-            task_windows, notes[kernel] = energy_task(args, meter, output, index, kernel, blobs[kernel], cases[kernel])
+            progress.log(f'{kind_name} {kernel} ({index + 1}/{len(kernels)})')
+            if args.sweep:
+                task_windows, notes[kernel] = sweep_task(args, meter, output, index, kernel)
+            else:
+                task_windows, notes[kernel] = energy_task(args, meter, output, index, kernel, blobs[kernel], cases[kernel])
             windows += task_windows
             (output / 'windows.json').write_text(json.dumps({'notes': notes, 'windows': windows}, indent=2))
     finally:
+        progress.close()
         meter.close()
-    results = analyse(read_trace(meter.trace), windows)
     (output / 'windows.json').write_text(json.dumps({'notes': notes, 'windows': windows}, indent=2))
-    overall = write_energy(output / 'ENERGY.md', results, notes, environment, args, windows)
-    (output / 'summary.json').write_text(json.dumps({'environment': environment, 'notes': notes, 'overall': overall,
-                                                     'tasks': results}, indent=2))
-    print(f'Report: {output / "ENERGY.md"}')
+    print(f'Report: {report(output, read_trace(meter.trace), windows, notes, environment, args)}')
+
+
+def report(folder: Path, trace: dict, windows: list[dict], notes: dict, environment: dict, args, suffix: str = '') -> Path:
+    """Analyse a finished energy, sweep or intermittent run and write its report and summary."""
+    results = analyse(trace, windows, getattr(args, 'baseline', 'p8'))
+    summary = {'environment': environment, 'notes': notes, 'baseline': getattr(args, 'baseline', 'p8')}
+    if getattr(args, 'sweep', None):
+        path, comparison = folder / f'SWEEP{suffix}.md', compare(results)
+        write_sweep(path, results, comparison, notes, environment, args, windows)
+        summary.update(comparison=comparison, tasks=results)
+    elif getattr(args, 'intermittent', None):
+        path, rows = folder / f'INTERMITTENT{suffix}.md', summarize_bursts(trace, windows, results)
+        summary.update(steady=results, bursts=rows,
+                       comparison=write_intermittent(path, rows, results, notes, environment, args, windows))
+    else:
+        path = folder / f'ENERGY{suffix}.md'
+        overall, comparison = write_energy(path, results, notes, environment, args, windows)
+        summary.update(overall=overall, comparison=comparison, tasks=results)
+    (folder / f'summary{suffix}.json').write_text(json.dumps(summary, indent=2))
+    return path
 
 
 def reanalyse(folder: Path) -> None:
-    """Apply the current estimator to a finished energy run; its own ENERGY.md and summary.json are kept."""
+    """Apply the current estimator to a finished energy, sweep or intermittent run; its own report and summary.json
+    are kept, and the new ones get a -reanalysed suffix."""
     saved = json.loads((folder / 'windows.json').read_text())
     args = argparse.Namespace(**json.loads((folder / 'arguments.json').read_text()))
     environment = json.loads((folder / 'summary.json').read_text())['environment']
-    results = analyse(read_trace(folder / 'trace.csv'), saved['windows'])
-    overall = write_energy(folder / 'ENERGY-reanalysed.md', results, saved['notes'], environment, args, saved['windows'])
-    (folder / 'summary-reanalysed.json').write_text(json.dumps(
-        {'environment': environment, 'notes': saved['notes'], 'overall': overall, 'tasks': results}, indent=2))
-    print(f'Report: {folder / "ENERGY-reanalysed.md"}')
+    path = report(folder, read_trace(folder / 'trace.csv'), saved['windows'], saved['notes'], environment, args, '-reanalysed')
+    print(f'Report: {path}')
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
 """Pure helpers for the kernel time and energy benchmark (method: docs/time-energy-measurement.md).
 
 Power comes from cumulative energy counters (Windows Energy Meter, RAPL) and from sampled GPU board power; both are
-read on the sampler's clock. A run window's power is compared with the mean of its neighbouring idle windows, which
-cancels linear drift, and paired differences get Student-t confidence intervals. Only numpy is required, so the
+read on the sampler's clock. A run window's power is compared with the idle power interpolated in time between its
+neighbouring idle windows, which cancels linear drift, and paired differences get Student-t confidence intervals. Only numpy is required, so the
 WSL orchestrator and the Windows NPU worker share this module.
 """
 from __future__ import annotations
@@ -64,34 +64,87 @@ def window_power(trace: dict, start: float, end: float) -> dict[str, float]:
     return power
 
 
-def gpu_settled(trace: dict, start: float, end: float) -> bool:
-    """True if the GPU sat in its idle P-state for at least SETTLED_FRACTION of [start, end] (or no GPU is traced)."""
+def idle_pstate_fraction(trace: dict, start: float, end: float) -> float | None:
+    """Fraction of the samples in [start, end] with the GPU in its idle P-state; None if no GPU is traced."""
     if trace.get('gpu_pstate') is None:
-        return True
+        return None
     t = np.asarray(trace['t'], float)
     states = np.asarray(trace['gpu_pstate'], float)[(t >= start) & (t <= end)]
-    return bool(len(states)) and float(np.mean(states >= GPU_IDLE_PSTATE)) >= SETTLED_FRACTION
+    return float(np.mean(states >= GPU_IDLE_PSTATE)) if len(states) else 0.0
+
+
+def gpu_settled(trace: dict, start: float, end: float) -> bool:
+    """True if the GPU sat in its idle P-state for at least SETTLED_FRACTION of [start, end] (or no GPU is traced)."""
+    fraction = idle_pstate_fraction(trace, start, end)
+    return fraction is None or fraction >= SETTLED_FRACTION
+
+
+def usable_idle(window: dict) -> bool:
+    return window['kind'] == 'idle' and window.get('settled', True)
+
+
+def midpoint(window: dict) -> float | None:
+    return (window['start'] + window['end']) / 2 if 'start' in window and 'end' in window else None
+
+
+def neighbours(windows: list[dict], index: int) -> tuple[dict | None, dict | None]:
+    """The nearest usable (settled) idle windows before and after windows[index]."""
+    before = next((w for w in reversed(windows[:index]) if usable_idle(w)), None)
+    after = next((w for w in windows[index + 1:] if usable_idle(w)), None)
+    return before, after
+
+
+def baseline(before: dict, after: dict, at: float | None) -> dict[str, float]:
+    """Idle power per rail at time `at`, interpolated linearly between two idle windows' midpoints (midway if any
+    time is unknown)."""
+    times = midpoint(before), at, midpoint(after)
+    weight = 0.5 if None in times else (times[1] - times[0]) / (times[2] - times[0])
+    return {rail: before['power'][rail] + weight * (after['power'][rail] - before['power'][rail])
+            for rail in before['power']}
 
 
 def paired_deltas(windows: list[dict]) -> list[dict]:
-    """For each run window (session order), its power minus the mean of the nearest usable idle windows before and
-    after. Windows are dicts with 'kind' ('idle' or 'run') and 'power'; a window with 'settled' False is skipped (an
-    idle window is then not a baseline, a run is dropped). Other keys are copied to the pair."""
-    def usable(w):
-        return w['kind'] == 'idle' and w.get('settled', True)
-
+    """For each run window (session order), its power minus the idle power interpolated linearly in time, at the run's
+    midpoint, between the nearest usable idle windows before and after; this cancels linear drift however unevenly the
+    windows are spaced (the plain mean of the two does so only for a run exactly midway). Windows are dicts with 'kind'
+    ('idle' or 'run'), 'power' and, for the interpolation, 'start' and 'end' (without them the run counts as midway).
+    A window with 'settled' False is skipped (an idle window is then not a baseline, a run is dropped). Other keys are
+    copied to the pair."""
     pairs = []
     for index, window in enumerate(windows):
         if window['kind'] != 'run' or not window.get('settled', True):
             continue
-        before = next((w for w in reversed(windows[:index]) if usable(w)), None)
-        after = next((w for w in windows[index + 1:] if usable(w)), None)
+        before, after = neighbours(windows, index)
         if before is None or after is None:
             continue
-        idle = {rail: (before['power'][rail] + after['power'][rail]) / 2 for rail in window['power']}
+        idle = baseline(before, after, midpoint(window))
+        times = midpoint(before), midpoint(window), midpoint(after)
         pairs.append({**{k: v for k, v in window.items() if k != 'power'}, 'power': window['power'], 'idle': idle,
+                      'baseline_weight': 0.5 if None in times else (times[1] - times[0]) / (times[2] - times[0]),
                       'delta': {rail: window['power'][rail] - idle[rail] for rail in window['power']}})
     return pairs
+
+
+def burst_energies(trace: dict, windows: list[dict]) -> list[dict]:
+    """For each 'bursts' window (an intermittent load whose 'marks' split it into whole periods), the energy per
+    period above the idle power interpolated to each period's midpoint, in J per rail, averaged over its periods.
+    A period holds one burst and everything after it until the next burst, so a device's post-burst power tail is
+    charged to the burst that caused it."""
+    found = []
+    for index, window in enumerate(windows):
+        if window['kind'] != 'bursts' or not window.get('settled', True):
+            continue
+        before, after = neighbours(windows, index)
+        if before is None or after is None:
+            continue
+        periods = []
+        for a, b in zip(window['marks'], window['marks'][1:]):
+            power, idle = window_power(trace, a, b), baseline(before, after, (a + b) / 2)
+            periods.append({rail: (power[rail] - idle[rail]) * (b - a) for rail in power})
+        found.append({**{k: v for k, v in window.items() if k != 'marks'},
+                      'idle': baseline(before, after, midpoint(window)),
+                      'energy_j': {rail: float(np.mean([p[rail] for p in periods])) for rail in periods[0]}})
+    return found
 
 
 def estimate(values) -> dict:
@@ -108,6 +161,29 @@ def estimate(values) -> dict:
     return {'n': count, 'mean': mean, 'sd': sd, 'se': se, 'ci95': [mean - half, mean + half],
             'significant': bool(abs(mean) > half), 'mde80': (quantile(T975, df) + quantile(T80, df)) * se,
             'upper95': mean + quantile(T95, df) * se}
+
+
+def ratio(numerator: dict, denominator: dict) -> dict | None:
+    """Ratio of two independent estimates (energy per inference of two devices on one task) with a 95% CI from the
+    delta method on the log scale, df = the smaller n - 1. None unless both are significant and positive."""
+    if not all(e and e['significant'] and e['mean'] > 0 for e in (numerator, denominator)):
+        return None
+    value = numerator['mean'] / denominator['mean']
+    se = math.hypot(numerator['se'] / numerator['mean'], denominator['se'] / denominator['mean'])
+    half = quantile(T975, min(numerator['n'], denominator['n']) - 1) * se
+    return {'ratio': value, 'ci95': [value * math.exp(-half), value * math.exp(half)], 'se_log': se}
+
+
+def geometric_mean(values) -> dict:
+    """Geometric mean of positive ratios across tasks, with the range and a 95% t-interval on the log scale (the
+    spread between tasks). Ratios of arithmetic means would weight the slowest tasks most."""
+    logs = np.log(np.asarray(values, float))
+    out = {'n': len(logs), 'geomean': float(np.exp(logs.mean())), 'min': float(np.exp(logs.min())),
+           'max': float(np.exp(logs.max())), 'ci95': None}
+    if len(logs) >= 2:
+        half = quantile(T975, len(logs) - 1) * float(logs.std(ddof=1)) / math.sqrt(len(logs))
+        out['ci95'] = [float(np.exp(logs.mean() - half)), float(np.exp(logs.mean() + half))]
+    return out
 
 
 def schedule(modes: list[str], cycles: int, seed: int) -> list[str]:
@@ -153,6 +229,8 @@ def run_window(step, warm: float, seconds: float, tail: float, clock, begin=None
     stop = clock() + warm
     while clock() < stop:
         step()
+    if finish is not None:
+        finish()  # drain queued warm-up work, which would otherwise run uncounted inside the window
     if begin is not None:
         begin()
     result = fixed_window(step, seconds, clock, finish=finish)
@@ -164,6 +242,33 @@ def run_window(step, warm: float, seconds: float, tail: float, clock, begin=None
     if finish is not None:
         finish()
     return result
+
+
+def bursts(step, calls: int, period: float, count: int, clock, sleep, finish=None, begin=None, end=None) -> dict:
+    """Intermittent load: at the start of each of `count` periods, begin() and a burst of `calls` step() calls that
+    finish() completes; the device then idles until the next period. end() marks the end of the last period, so the
+    marks split the load into whole periods, each holding one burst and the idle time (and any power tail) after it."""
+    start, durations = clock(), []
+
+    def wait_until(target):
+        while (now := clock()) < target:
+            sleep(min(target - now, 0.05))
+
+    for index in range(count):
+        wait_until(start + index * period)
+        if begin is not None:
+            begin()
+        started = clock()
+        for _ in range(calls):
+            step()
+        if finish is not None:
+            finish()
+        durations.append(clock() - started)
+    wait_until(start + count * period)
+    if end is not None:
+        end()
+    return {'calls': calls, 'period': period, 'count': count, 'burst_s': durations,
+            'overrun': bool(max(durations) > period)}
 
 
 def rounds(step, count: int, calls: int, clock) -> dict:

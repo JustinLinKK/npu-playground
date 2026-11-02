@@ -5,13 +5,20 @@ worker is the NPU's loaded-but-idle baseline. Inputs are bound once into plugin-
 the executor's timing), so timed calls exclude input copies. Method: docs/time-energy-measurement.md.
 
   load    {request, blob}        check the request and import its blob on the NPU alone (scripts/intel_npu_executor.py)
+  build   {config, inputs, out, properties}
+                                 compile a research/sweep_kernels.py configuration on the NPU alone, bind the inputs
+                                 saved in <inputs> (.npz) and save one inference's output as <out> (.npz)
   cases   {out}                  run every request case and save the outputs as <out>/<case>.npz
-  warmup  {count}                synchronous inferences, untimed
+  warmup  {count, seconds}       synchronous inferences, untimed; stops early after `seconds` if given
   rounds  {count, calls}         per-call times of synchronous inferences
   window  {mode, warm, seconds, tail, nireq}
                                  fixed window of back-to-back inferences, mode 'sync' or 'async'; prints
                                  {"event": "begin"} and {"event": "end", ...} the moment they happen, then
                                  {"event": "done", ...}
+  bursts  {mode, calls, period, count, nireq}
+                                 intermittent load: every `period` seconds a burst of `calls` inferences, `count`
+                                 times, starting at once; prints {"event": "begin"} at each burst start and
+                                 {"event": "end"} when the last period ends, then {"event": "done", ...}
   quit
 """
 from __future__ import annotations
@@ -28,11 +35,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / 'scripts'), str(ROOT / 'research')]
 
 import energy_meter  # noqa: E402
-from intel_npu_executor import load_blob  # noqa: E402  (also puts src/ and playground/tools on sys.path)
+from intel_npu_executor import execution_devices, load_blob, npu_core  # noqa: E402  (also puts src/ on sys.path)
 from npu_agent.executors import decode_tensor  # noqa: E402
 from npu_agent.models import ExecutionRequest  # noqa: E402
 
-COMMANDS = ('load', 'cases', 'warmup', 'rounds', 'window')
+COMMANDS = ('load', 'build', 'cases', 'warmup', 'rounds', 'window', 'bursts')
 
 
 class Worker:
@@ -54,6 +61,28 @@ class Worker:
                 'openvino': self.ov.get_version(),
                 'optimal_nireq': int(self.compiled.get_property('OPTIMAL_NUMBER_OF_INFER_REQUESTS'))}
 
+    def build(self, config: str, inputs: str, out: str, properties: dict | None = None) -> dict:
+        import sweep_kernels
+
+        spec = sweep_kernels.SWEEP[config]
+        self.ov, core = npu_core()
+        started = self.clock()
+        self.compiled = core.compile_model(sweep_kernels.openvino_model(spec), 'NPU', properties or {})
+        compile_s = self.clock() - started
+        devices = execution_devices(self.compiled)
+        if devices != ['NPU']:
+            raise RuntimeError(f'compiled model would run on {devices}, not the NPU alone')
+        with np.load(inputs) as saved:
+            self.feed = {name: saved[name] for name in spec['inputs']}
+        self.infer, self.queues = self.compiled.create_infer_request(), {}
+        self.infer.infer(self.feed)
+        np.savez(out, out=np.array(self.infer.get_output_tensor(0).data, copy=True))
+        return {'device': str(core.get_property('NPU', 'FULL_DEVICE_NAME')),
+                'architecture': str(core.get_property('NPU', 'DEVICE_ARCHITECTURE')), 'execution_devices': devices,
+                'driver': str(core.get_property('NPU', 'NPU_DRIVER_VERSION')), 'openvino': self.ov.get_version(),
+                'compile_s': compile_s, 'properties': properties or {},
+                'optimal_nireq': int(self.compiled.get_property('OPTIMAL_NUMBER_OF_INFER_REQUESTS'))}
+
     def cases(self, out: str) -> dict:
         folder = Path(out)
         folder.mkdir(parents=True, exist_ok=True)
@@ -64,10 +93,12 @@ class Worker:
         self.infer.infer(self.feed)  # rebind the timed case
         return {'cases': len(self.request.cases)}
 
-    def warmup(self, count: int) -> dict:
-        for _ in range(count):
+    def warmup(self, count: int, seconds: float | None = None) -> dict:
+        deadline, done = (self.clock() + seconds) if seconds else None, 0
+        while done < count and (deadline is None or self.clock() < deadline):
             self.infer.infer()
-        return {'warmup': count}
+            done += 1
+        return {'warmup': done}
 
     def rounds(self, count: int, calls: int) -> dict:
         return energy_meter.rounds(self.infer.infer, count, calls, self.clock)
@@ -92,6 +123,14 @@ class Worker:
             begin=lambda: self.emit({'event': 'begin', 't': self.clock()}),
             end=lambda window: self.emit({'event': 'end', 't': self.clock(), **window}))
         return {'event': 'done', 'mode': mode, 'nireq': nireq if mode == 'async' else 1, **result}
+
+
+    def bursts(self, mode: str, calls: int, period: float, count: int, nireq: int = 4) -> dict:
+        step, finish = self.step(mode, nireq)
+        result = energy_meter.bursts(step, calls, period, count, self.clock, time.sleep, finish=finish,
+                                     begin=lambda: self.emit({'event': 'begin', 't': self.clock()}),
+                                     end=lambda: self.emit({'event': 'end', 't': self.clock()}))
+        return {'event': 'done', 'mode': mode, **result}
 
 
 def serve(worker: Worker, lines, emit) -> None:

@@ -2,6 +2,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -75,6 +76,17 @@ def test_paired_deltas_cancel_linear_drift_exactly():
     assert meter.paired_deltas([{'kind': 'run', 'power': {'pkg': 1}}]) == []
 
 
+def test_baseline_is_interpolated_in_time_when_windows_are_unevenly_spaced():
+    # After a GPU run the schedule waits for P8, and unsettled idles are skipped, so a run rarely sits midway.
+    spans = [('idle', 0, 5), ('run', 5.5, 11.5), ('idle', 22, 27)]
+    windows = [{'kind': k, 'start': a, 'end': b, 'power': {'pkg': 30 + 0.2 * (a + b) / 2 + (2 if k == 'run' else 0)}}
+               for k, a, b in spans]
+    pair, = meter.paired_deltas(windows)
+    assert pair['delta']['pkg'] == pytest.approx(2.0) and pair['baseline_weight'] == pytest.approx(6 / 22)
+    plain_mean = windows[1]['power']['pkg'] - (windows[0]['power']['pkg'] + windows[2]['power']['pkg']) / 2
+    assert plain_mean == pytest.approx(1.0)  # the old estimator reported half the effect
+
+
 def test_unsettled_idle_windows_are_not_baselines():
     t = np.linspace(0, 30, 1501)
     pstate = np.where((t > 10) & (t < 16), 1.0, 8.0)  # GPU holds P1 for 6 s after work
@@ -111,6 +123,16 @@ def test_paired_estimator_is_unbiased_with_nominal_coverage_under_drift():
         positives += null['significant']
     assert np.mean(estimates) == pytest.approx(2.0, abs=0.1)
     assert 0.90 <= covered / 300 <= 0.98 and positives / 300 <= 0.08
+
+
+def test_ratio_and_geometric_mean_of_efficiency():
+    npu, gpu = meter.estimate([2000, 2100, 1900, 2000]), meter.estimate([1000, 1010, 990, 1000])
+    found = meter.ratio(npu, gpu)
+    assert found['ratio'] == pytest.approx(2.0) and found['ci95'][0] < 2.0 < found['ci95'][1]
+    assert meter.ratio(npu, meter.estimate([1.0, -1.0, 0.5])) is None  # not significant
+    overall = meter.geometric_mean([1.0, 4.0])
+    assert overall['geomean'] == pytest.approx(2.0) and (overall['min'], overall['max']) == (1.0, 4.0)
+    assert meter.geometric_mean([3.0])['ci95'] is None
 
 
 def test_schedule_shuffles_each_cycle_reproducibly():
@@ -154,6 +176,50 @@ def test_run_window_marks_only_inside_the_busy_span():
     begin, end = kinds.index('begin'), kinds.index('end')
     assert 0 < begin < end < len(kinds) - 1 and 'step' in kinds[begin:end]
     assert events[-1][1] >= events[end][1] + 0.3 - 0.02 and result['calls'] == end - begin - 1
+
+
+def test_run_window_drains_queued_warmup_work_before_the_counted_window():
+    clock, events = FakeClock(0.01), []
+
+    def step():
+        events.append('step')
+        clock.advance()
+
+    meter.run_window(step, 0.05, 0.2, 0.0, clock, begin=lambda: events.append('begin'),
+                     finish=lambda: events.append('finish'))
+    assert events[events.index('begin') - 1] == 'finish'
+
+
+def test_bursts_mark_every_period_and_idle_between_bursts():
+    clock, marks, slept = FakeClock(0.001), [], []
+
+    def sleep(seconds):
+        slept.append(seconds)
+        clock.now += seconds
+
+    result = meter.bursts(clock.advance, 10, 0.5, 3, clock, sleep, begin=lambda: marks.append(clock()),
+                          end=lambda: marks.append(clock()))
+    assert marks == pytest.approx([0.0, 0.5, 1.0, 1.5], abs=1e-9) and len(result['burst_s']) == 3
+    assert result['burst_s'] == pytest.approx([0.01] * 3) and not result['overrun'] and sum(slept) == pytest.approx(1.47)
+
+
+def test_burst_energy_charges_the_power_tail_to_its_burst():
+    t = np.linspace(0, 100, 50001)
+    # Idle 30 W with drift; each burst adds 40 W for 0.1 s, then a 12 W tail for 6 s (a GPU's P1 hold).
+    extra = np.zeros_like(t)
+    starts = [20.0, 30.0, 40.0]
+    for start in starts:
+        extra[(t >= start) & (t < start + 0.1)] += 40.0
+        extra[(t >= start + 0.1) & (t < start + 6.1)] += 12.0
+    power = 30 + 0.01 * t + extra
+    trace = {'t': t, 'pkg_j': np.concatenate([[0], np.cumsum(power[:-1] * np.diff(t))]), 'pp0_j': 0 * t, 'pp1_j': 0 * t}
+    windows = [{'kind': 'idle', 'start': 5.0, 'end': 15.0}, {'kind': 'bursts', 'task': 'k', 'mode': 'gpu_sync',
+               'calls': 1, 'period': 10.0, 'count': 3, 'marks': starts + [50.0], 'start': 20.0, 'end': 50.0,
+               'burst_s': [0.1] * 3, 'overrun': False}, {'kind': 'idle', 'start': 55.0, 'end': 65.0}]
+    for window in windows:
+        window['power'] = meter.window_power(trace, window['start'], window['end'])
+    found, = meter.burst_energies(trace, windows)
+    assert found['energy_j']['pkg'] == pytest.approx(40 * 0.1 + 12 * 6, rel=0.01)  # 76 J per burst, tail included
 
 
 def test_rounds_reports_per_call_statistics():
@@ -250,6 +316,16 @@ def test_analysis_turns_windows_into_energy_per_inference():
     assert npu['energy_uj']['soc']['mean'] == pytest.approx(1.0 * 2e-4 * 1e6, rel=0.02)  # 200 uJ
     assert gpu['headline'] == 'system' and gpu['energy_uj']['system']['mean'] == pytest.approx(23 * 2e-5 * 1e6, rel=0.02)
     assert gpu['delta_w']['gpu']['mean'] == pytest.approx(20.0, rel=0.02) and npu['pairs'] == gpu['pairs'] == 2
+    for window in windows:  # the GPU leaves P8 during the second NPU run, as when the desktop wakes it
+        window.pop('settled', None)
+    trace['gpu_pstate'] = np.where((t > windows[5]['start']) & (t < windows[5]['end']), 3.0, 8.0)
+    assert orchestrator.analyse(trace, windows)['kb_019_relu']['npu_sync']['pairs'] == 1
+    assert orchestrator.analyse(trace, windows, 'desktop')['kb_019_relu']['npu_sync']['pairs'] == 2
+    assert windows[5]['gpu_p8_fraction'] < 0.1 and windows[4]['gpu_p8_fraction'] == 1.0
+    del trace['gpu_pstate']
+    comparison = orchestrator.compare({'kb_019_relu': results})
+    assert comparison['sync_headline']['overall']['geomean'] == pytest.approx(200 / 460, rel=0.03)  # EER(GPU)/EER(NPU)
+    assert comparison['throughput_headline']['overall'] is None  # no async or pipelined runs
 
 
 def test_gpu_sync_gates_are_separate_from_the_ramp_gate():
@@ -286,8 +362,41 @@ def test_meter_waits_for_the_gpu_idle_pstate(monkeypatch):
     assert waiting.wait_gpu_idle(cap=2, hold=0.5) >= 2
     waiting.helper = FakeHelper([None])
     assert waiting.wait_gpu_idle(cap=2) == pytest.approx(0, abs=0.5)
+    slept = []
+    monkeypatch.setattr(orchestrator.time, 'sleep', slept.append)
+    desktop = SimpleNamespace(baseline='desktop', desktop_settle=10.0, settle=20.0)
+    waiting.helper = FakeHelper([1] * 1000)  # the desktop keeps the GPU busy: no P8 wait, a fixed one
+    assert orchestrator.settle_gpu(waiting, desktop) == 10.0 and slept == [10.0]
 
 
 def test_no_code_reads_the_broken_nvml_energy_counter():
     for path in ('scripts/windows_power_sampler.py', 'research/benchmark_kernel_energy.py', 'research/energy_meter.py'):
         assert 'GetTotalEnergyConsumption' not in (ROOT / path).read_text()
+
+
+def test_sweep_configs_have_consistent_shapes_and_references():
+    sweep = module('research/sweep_kernels.py')
+    assert sweep.SWEEP['relu_b1']['inputs'] == {'x': [1, 4, 65]}  # kb_019_relu's shape
+    assert sweep.SWEEP['matmul_1024']['flops'] == 2 * 1024 ** 3 and sweep.SWEEP['relu_b4096']['instances'] == 4096
+    assert all(base in sweep.SWEEP for base in sweep.BATCH_BASE.values())
+    for name in ('add_n4096', 'relu_b64', 'softmax_b16', 'matmul_b16'):
+        spec = sweep.SWEEP[name]
+        feed = sweep.inputs(spec)
+        want = sweep.reference(spec, feed)
+        assert list(want.shape) == spec['output'] and want.dtype == np.float16
+        assert sweep.check(spec, want, want)['within_tolerance'] == 1.0
+    softmax = sweep.reference(sweep.SWEEP['softmax_32x128'], sweep.inputs(sweep.SWEEP['softmax_32x128']))
+    assert np.allclose(softmax.astype(np.float32).sum(-1), 1, atol=0.02)
+
+
+def test_progress_counts_runs_and_estimates_the_time_left(monkeypatch, capsys):
+    monkeypatch.setattr(orchestrator, 'tqdm', None)  # the plain fallback; tqdm is optional
+    clock = iter([0.0, 0.0, 60.0])
+    monkeypatch.setattr(orchestrator.time, 'monotonic', lambda: next(clock))
+    progress = orchestrator.Progress()
+    progress.log('before start')
+    progress.start(4, 'sweep')
+    progress.step('relu_b1 npu_sync')
+    out = capsys.readouterr()
+    assert out.out == 'before start\n'
+    assert out.err.strip() == '[1/4] 1.0 min elapsed, about 3 min left: relu_b1 npu_sync'

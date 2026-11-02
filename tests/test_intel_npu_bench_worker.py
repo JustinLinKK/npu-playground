@@ -105,6 +105,11 @@ def test_worker_loads_saves_cases_and_runs_both_window_modes(worker_module, tmp_
     queue = worker.queues[3]
     assert len(queue) == 3 and queue.started >= asynchronous['calls'] and queue.waits >= 2  # drained inside and after
     assert asynchronous['nireq'] == 3 and [e['event'] for e in events] == ['begin', 'end']
+    events.clear()
+    bursts = worker.bursts('sync', calls=3, period=0.02, count=2)
+    assert [e['event'] for e in events] == ['begin', 'begin', 'end'] and len(bursts['burst_s']) == 2
+    assert bursts['event'] == 'done' and not bursts['overrun']
+    assert worker.warmup(10 ** 9, seconds=0.01)['warmup'] < 10 ** 9  # capped by time
 
 
 def test_serve_reports_errors_and_quits(worker_module):
