@@ -254,6 +254,9 @@ Physical execution is observational:
   task, with the median p50 over FP16-verified tasks. The CSV files add
   `npu_latency_*` columns. The setting is part of the campaign identity, so resume
   with the same value. Prompts are identical with or without timing.
+- **Time and energy against the original GPU kernels.** See
+  [time-energy-measurement.md](time-energy-measurement.md) for the model-free benchmark
+  (`research/benchmark_kernel_energy.py`), its method and its caveats.
 - Like the AMD launcher, this one has no local dollar cap. Check billing on
   OpenAI.
 

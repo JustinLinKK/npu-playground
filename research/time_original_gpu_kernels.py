@@ -24,6 +24,7 @@ import platform
 import re
 import sys
 import time
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -120,7 +121,9 @@ def triton_task(folder: Path, manifest: dict, inputs: list):
     return launch, f'grid ({rows},), BLOCK {block}'
 
 
-def measure(folder: Path, cases: list[str], warmup: int, runs: int) -> dict:
+def prepare(folder: Path, cases: list[str]) -> SimpleNamespace:
+    """Compile an original source, check it on every stored case and leave the first case's inputs on the device.
+    launch() enqueues the kernel on the current stream (CuPy's, or torch's for Triton) and returns its output."""
     import cupy as cp
     import torch
 
@@ -158,25 +161,32 @@ def measure(folder: Path, cases: list[str], warmup: int, runs: int) -> dict:
     first = host_inputs(cases[0])
     upload(device, first)
     synchronize()
+    return SimpleNamespace(manifest=manifest, triton=triton, launch=launch, launch_shape=launch_shape,
+                           upload=lambda host: upload(device, host), download=download, synchronize=synchronize,
+                           event=event, elapsed=elapsed, first=first, passed=passed, cases_run=len(cases), worst=worst)
+
+
+def measure(folder: Path, cases: list[str], warmup: int, runs: int) -> dict:
+    task = prepare(folder, cases)
 
     def on_device():
-        start, end = event(), event()
+        start, end = task.event(), task.event()
         start.record()
-        launch()
+        task.launch()
         end.record()
         end.synchronize()
-        return elapsed(start, end)
+        return task.elapsed(start, end)
 
     def launch_and_sync():
         started = time.perf_counter()
-        launch()
-        synchronize()
+        task.launch()
+        task.synchronize()
         return (time.perf_counter() - started) * 1e3
 
     def end_to_end():
         started = time.perf_counter()
-        upload(device, first)
-        download(launch())
+        task.upload(task.first)
+        task.download(task.launch())
         return (time.perf_counter() - started) * 1e3
 
     timings = {}
@@ -184,10 +194,11 @@ def measure(folder: Path, cases: list[str], warmup: int, runs: int) -> dict:
         for _ in range(warmup):
             step()
         timings[name] = stats([step() for _ in range(runs)])
+    manifest = task.manifest
     dtypes = sorted({t['dtype'] for t in manifest['tensors']})
-    return {'kernel': folder.name, 'dialect': manifest['dialect'], 'dtypes': dtypes, 'launch': launch_shape,
-            'cases_passed': passed, 'cases_run': len(cases), 'correct': passed == len(cases),
-            'max_error_over_bound': worst, **timings}
+    return {'kernel': folder.name, 'dialect': manifest['dialect'], 'dtypes': dtypes, 'launch': task.launch_shape,
+            'cases_passed': task.passed, 'cases_run': task.cases_run, 'correct': task.passed == task.cases_run,
+            'max_error_over_bound': task.worst, **timings}
 
 
 def environment() -> dict:

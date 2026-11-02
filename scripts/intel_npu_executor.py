@@ -38,7 +38,8 @@ def execution_devices(compiled) -> list[str]:
     return [value] if isinstance(value, str) else [str(item) for item in value]
 
 
-def run(request: ExecutionRequest) -> ExecutionResult:
+def load_blob(request: ExecutionRequest):
+    """Check a request and import its blob on the NPU alone: (ov, core, compiled, inputs, outputs, architecture, devices)."""
     target = request.target
     if target.vendor != 'intel' or target.compiler_properties.get('NPU_PLATFORM') != target.hardware:
         raise ValueError('local executor requires an Intel NPU target compiled for its own platform')
@@ -62,6 +63,12 @@ def run(request: ExecutionRequest) -> ExecutionResult:
     if devices != ['NPU']:
         raise RuntimeError(f'blob did not load on the NPU alone: {devices}')
     inputs, outputs = check_ports(compiled, request.manifest)
+    return ov, core, compiled, inputs, outputs, architecture, devices
+
+
+def run(request: ExecutionRequest) -> ExecutionResult:
+    target = request.target
+    ov, core, compiled, inputs, outputs, architecture, devices = load_blob(request)
     infer = compiled.create_infer_request()
     feeds, results = {}, {}
     for case_id, encoded in request.cases.items():
